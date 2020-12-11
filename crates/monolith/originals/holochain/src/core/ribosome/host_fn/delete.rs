@@ -47,8 +47,7 @@ pub fn delete<'a>(
             workspace.source_chain.elements(),
             &mut workspace.meta_authored,
         )
-        .map_err(Box::new)
-        .map_err(SourceChainError::from)?;
+        .map_err(Box::new)?;
         Ok(DeleteOutput::new(header_hash))
     })
 }

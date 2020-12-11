@@ -87,8 +87,7 @@ pub fn delete_link<'a>(
             workspace.source_chain.elements(),
             &mut workspace.meta_authored,
         )
-        .map_err(Box::new)
-        .map_err(SourceChainError::from)?;
+        .map_err(Box::new)?;
         Ok(DeleteLinkOutput::new(header_hash))
     })
 }
