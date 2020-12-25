@@ -6,7 +6,7 @@
 //! code. This crate expands on those types to include all types which Holochain
 //! itself depends on.
 
-#![deny(missing_docs)]
+//#![deny(missing_docs)]
 
 pub mod activity;
 pub mod app;

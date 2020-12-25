@@ -1,10 +1,10 @@
 //! Collection of cells to form a holochain application
-use crate::dna::JsonProperties;
+use crate::{dna::JsonProperties, prelude::{DnaDefHashed, DnaFile, wasm}};
 use derive_more::Into;
 use holo_hash::AgentPubKey;
 use holochain_serialized_bytes::SerializedBytes;
 use holochain_zome_types::cell::CellId;
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 /// Placeholder used to identify installed apps
 pub type InstalledAppId = String;
@@ -23,9 +23,16 @@ pub struct InstallAppPayload {
     pub dnas: Vec<InstallAppDnaPayload>,
 }
 
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(untagged)]
+pub enum InstallAppDnaPayload {
+    InstallAppDnaPayloadPath(InstallAppDnaPayloadPath),
+    InstallAppDnaPayloadFile(InstallAppDnaPayloadFile),
+}
+
 /// Information needed to specify a Dna as part of an App
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct InstallAppDnaPayload {
+pub struct InstallAppDnaPayloadPath {
     /// The path of the DnaFile
     pub path: PathBuf,
     /// The CellNick which will be assigned to this Dna when installed
@@ -36,15 +43,54 @@ pub struct InstallAppDnaPayload {
     pub membrane_proof: Option<MembraneProof>,
 }
 
+/// Wasms need to be an ordered map from WasmHash to a wasm::DnaWasm
+pub type WasmsInput = Vec<(holo_hash::WasmHash, wasm::DnaWasm)>;
+
+/// Represents a full DNA file including WebAssembly bytecode.
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
+pub struct DnaFileInput {
+    /// The hashable portion that can be shared with hApp code.
+    pub dna: DnaDefHashed,
+
+    /// The bytes of the WASM zomes referenced in the Dna portion.
+    pub code: WasmsInput,
+}
+
+/// Information needed to specify a Dna as part of an App
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct InstallAppDnaPayloadFile {
+    /// The path of the DnaFile
+    pub file: DnaFileInput,
+    /// The CellNick which will be assigned to this Dna when installed
+    pub nick: CellNick,
+    /// App-specific proof-of-membrane-membership, if required by this app
+    pub membrane_proof: Option<MembraneProof>,
+}
+
+impl Into<DnaFile> for DnaFileInput {
+    fn into(self) -> DnaFile {
+        let mut code: BTreeMap<holo_hash::WasmHash, wasm::DnaWasm> = BTreeMap::new();
+
+        for c in self.code {
+            code.insert(c.0, c.1);
+        }
+
+        DnaFile {
+            code,
+            dna: self.dna,
+        }
+    }
+}
+
 impl InstallAppDnaPayload {
     /// Create a payload with no JsonProperties or MembraneProof. Good for tests.
     pub fn path_only(path: PathBuf, nick: CellNick) -> Self {
-        Self {
+        InstallAppDnaPayload::InstallAppDnaPayloadPath(InstallAppDnaPayloadPath {
             path,
             nick,
             properties: None,
             membrane_proof: None,
-        }
+        })
     }
 }
 
