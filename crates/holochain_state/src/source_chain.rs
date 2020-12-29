@@ -119,7 +119,7 @@ impl SourceChain {
                     Ok(match header.as_content().header() {
                         Header::Create(create) => {
                             // filter out authorship and everything else
-                            matches!(create.entry_type, EntryType::CapGrant,)
+                            matches!(create.entry_type, EntryType::CapGrant)
                         }
                         Header::Update(update) => matches!(
                             update.entry_type,
