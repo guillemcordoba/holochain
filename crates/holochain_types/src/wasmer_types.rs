@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tracing::info;
 use wasmer::{
-    wasmparser, CompileError, CompilerConfig, CpuFeature, Cranelift, Engine, Module,
+    wasmparser, BaseTunables, CompileError, CompilerConfig, CpuFeature, Cranelift, Engine, Module,
     NativeEngineExt, Store, Target, Triple,
 };
 use wasmer_middlewares::*;
