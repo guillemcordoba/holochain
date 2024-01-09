@@ -5,8 +5,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tracing::info;
 use wasmer::{
-    wasmparser, CompileError, CompilerConfig, CpuFeature, Cranelift, Engine, Module, Store, Target,
-    Triple,
+    wasmparser, CompileError, CompilerConfig, CpuFeature, Cranelift, Engine, Module,
+    NativeEngineExt, Store, Target, Triple,
 };
 use wasmer_middlewares::*;
 
@@ -28,7 +28,16 @@ pub fn cranelift() -> Engine {
     let metering = Arc::new(Metering::new(WASM_METERING_LIMIT, cost_function));
     let mut compiler = Cranelift::default();
     compiler.canonicalize_nans(true).push_middleware(metering);
-    Engine::from(compiler)
+    let mut engine = Engine::from(compiler);
+
+    #[cfg(target_os = "ios")]
+    engine.set_tunables(BaseTunables {
+        static_memory_bound: 0x4000.into(),
+        static_memory_offset_guard_size: 0x1_0000,
+        dynamic_memory_offset_guard_size: 0x1_0000,
+    });
+
+    engine
 }
 
 /// Configuration of a Target for wasmer for iOS
