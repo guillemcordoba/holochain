@@ -440,6 +440,41 @@ impl KitsuneP2pConfig {
     pub fn to_tx2(&self) -> KitsuneResult<KitsuneP2pTx2Config> {
         use KitsuneP2pTx2ProxyConfig::*;
         match self.transport_pool.get(0) {
+            Some(TransportConfig::Proxy {
+                sub_transport,
+                proxy_config,
+            }) => {
+                let backend = match &**sub_transport {
+                    TransportConfig::Mem {} => KitsuneP2pTx2Backend::Mem,
+                    TransportConfig::Quic { bind_to, .. } => {
+                        let bind_to = cnv_bind_to(bind_to);
+                        KitsuneP2pTx2Backend::Quic { bind_to }
+                    }
+                    _ => return Err("kitsune tx2 backend must be mem or quic".into()),
+                };
+                let use_proxy = match proxy_config {
+                    ProxyConfig::RemoteProxyClient { proxy_url } => {
+                        Specific(proxy_url.clone().into())
+                    }
+                    ProxyConfig::RemoteProxyClientFromBootstrap {
+                        bootstrap_url,
+                        fallback_proxy_url,
+                    } => Bootstrap {
+                        bootstrap_url: bootstrap_url.clone().into(),
+                        fallback_proxy_url: fallback_proxy_url.clone().map(Into::into),
+                    },
+                    ProxyConfig::LocalProxyServer { .. } => NoProxy,
+                };
+                Ok(KitsuneP2pTx2Config { backend, use_proxy })
+            }
+            Some(TransportConfig::Quic { bind_to, .. }) => {
+                let bind_to = cnv_bind_to(bind_to);
+                Ok(KitsuneP2pTx2Config {
+                    backend: KitsuneP2pTx2Backend::Quic { bind_to },
+                    use_proxy: NoProxy,
+                })
+            }
+
             Some(TransportConfig::Mock { mock_network }) => Ok(KitsuneP2pTx2Config {
                 backend: KitsuneP2pTx2Backend::Mock {
                     mock_network: mock_network.0.clone(),
@@ -485,6 +520,35 @@ pub enum TransportConfig {
         /// The adaptor for mocking the network
         mock_network: AdapterFactoryMock,
     },
+    /// A transport that uses the QUIC protocol
+    #[cfg(feature = "tx2")]
+    Quic {
+        /// Network interface / port to bind to
+        /// Default: "kitsune-quic://0.0.0.0:0"
+        bind_to: Option<Url2>,
+        /// If you have port-forwarding set up,
+        /// or wish to apply a vanity domain name,
+        /// you may need to override the local NIC IP.
+        /// Default: None = use NIC IP
+        override_host: Option<String>,
+        /// If you have port-forwarding set up,
+        /// you may need to override the local NIC port.
+        /// Default: None = use NIC port
+        override_port: Option<u16>,
+    },
+    /// A transport that TLS tunnels through a sub-transport (ALPN kitsune-proxy/0)
+    #[cfg(feature = "tx2")]
+    Proxy {
+        /// The 'Proxy' transport is a wrapper around a sub-transport.
+        /// We also need to define the sub-transport.
+        sub_transport: Box<TransportConfig>,
+        /// Determines whether we wish to:
+        /// - proxy through a remote
+        /// - be a proxy server for others
+        /// - be directly addressable, but not proxy for others
+        proxy_config: ProxyConfig,
+    },
+
     /// Configure to use Tx5 WebRTC for kitsune networking.
     #[cfg(feature = "tx5")]
     #[serde(rename = "webrtc", alias = "web_r_t_c", alias = "web_rtc")]
@@ -498,8 +562,8 @@ pub enum KitsuneP2pTx2Backend {
     #[allow(dead_code)]
     #[cfg(feature = "tx2")]
     Mem,
-    //#[cfg(feature = "tx2")]
-    //Quic { bind_to: TxUrl },
+    #[cfg(feature = "tx2")]
+    Quic { bind_to: TxUrl },
     #[allow(dead_code)]
     #[cfg(feature = "tx2")]
     Mock { mock_network: AdapterFactory },

@@ -625,7 +625,6 @@ impl MetaNet {
                     TxUrl::from_str_panicking("none:"),
                 )
             }
-            /*
             KitsuneP2pTx2Backend::Quic { bind_to } => {
                 let mut conf = QuicConfig::default();
                 conf.tls = Some(tls_config.clone());
@@ -637,7 +636,6 @@ impl MetaNet {
                     bind_to,
                 )
             }
-            */
             KitsuneP2pTx2Backend::Mock { mock_network } => {
                 is_mock = true;
                 (mock_network, TxUrl::from_str_panicking("none:"))

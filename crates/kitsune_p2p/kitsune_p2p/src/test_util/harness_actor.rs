@@ -12,7 +12,6 @@ ghost_actor::ghost_chan! {
         /// + all new harness agents will also join it
         fn add_space() -> Arc<KitsuneSpace>;
 
-        /*
         /// Create a new agent configured to proxy for others.
         fn add_proxy_agent(nick: String) -> (
             Arc<KitsuneAgent>,
@@ -38,7 +37,6 @@ ghost_actor::ghost_chan! {
             Arc<KitsuneAgent>,
             ghost_actor::GhostSender<KitsuneP2p>,
         );
-        */
 
         /// Magically exchange peer data between peers in harness
         fn magic_peer_info_exchange() -> ();

@@ -15,8 +15,8 @@ pub const BOOTSTRAP_SERVICE_DEV: &str = "https://bootstrap-dev.holohost.workers.
 pub(crate) enum KitsuneP2pTx2Backend {
     #[cfg(feature = "tx2")]
     Mem,
-    //#[cfg(feature = "tx2")]
-    //Quic { bind_to: TxUrl },
+    #[cfg(feature = "tx2")]
+    Quic { bind_to: TxUrl },
     #[cfg(feature = "tx2")]
     Mock { mock_network: AdapterFactory },
 }
@@ -153,7 +153,6 @@ pub enum TransportConfig {
     /// (this is mainly for testing)
     #[cfg(feature = "tx2")]
     Mem {},
-    /*
     /// A transport that uses the QUIC protocol
     #[cfg(feature = "tx2")]
     Quic {
@@ -185,7 +184,6 @@ pub enum TransportConfig {
         /// - be directly addressable, but not proxy for others
         proxy_config: ProxyConfig,
     },
-    */
     /// A mock network for testing
     #[cfg(feature = "tx2")]
     #[serde(skip)]
