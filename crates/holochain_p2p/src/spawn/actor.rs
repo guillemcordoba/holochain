@@ -3,6 +3,7 @@ use crate::actor::*;
 use crate::event::*;
 use crate::*;
 
+use firestore::errors::FirestoreError;
 use futures::future::FutureExt;
 use futures::stream::{BoxStream, StreamExt};
 use kitsune_p2p::actor::BroadcastData;
@@ -1040,6 +1041,7 @@ impl ghost_actor::GhostHandler<HolochainP2p> for HolochainP2pActor {}
 #[derive(Serialize, Deserialize, Debug)]
 struct DnaRecord {
     dna_hash: DnaHash,
+    timestamp: Timestamp,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -1059,15 +1061,21 @@ impl HolochainP2pHandler for HolochainP2pActor {
         let db = self.db.clone();
 
         Ok(async move {
-            let _r: DnaRecord = db
+            match db
                 .fluent()
                 .insert()
                 .into("dnas")
                 .document_id(DnaHashB64::from(dna_hash.clone()).to_string())
-                .object(&DnaRecord { dna_hash })
-                .execute()
+                .object(&DnaRecord {
+                    dna_hash,
+                    timestamp: Timestamp::now(),
+                })
+                .execute::<DnaRecord>()
                 .await
-                .expect("Could not create dna");
+            {
+                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                Err(err) => Err(HolochainP2pError::Firestore(err)),
+            }?;
             Ok(())
         }
         .boxed()
@@ -1182,9 +1190,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
             if let Some(ops) = reflect_ops {
                 // Insert DNA
 
-                let parent_path = db
-                    .parent_path("dnas", DnaHashB64::from(dna_hash).to_string())
-                    .expect("Could not build parent path");
+                let parent_path = db.parent_path("dnas", DnaHashB64::from(dna_hash).to_string())?;
                 for op in ops {
                     match op {
                         DhtOp::RegisterUpdatedRecord(signature, update, entry) => {
@@ -1197,14 +1203,11 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 },
                                 entry.as_option().cloned(),
                             );
-                            let p = parent_path
-                                .clone()
-                                .at(
-                                    "records",
-                                    ActionHashB64::from(update.original_action_address.clone())
-                                        .to_string(),
-                                )
-                                .expect("Can't build parent path");
+                            let p = parent_path.clone().at(
+                                "records",
+                                ActionHashB64::from(update.original_action_address.clone())
+                                    .to_string(),
+                            )?;
 
                             let _r: Record = db
                                 .fluent()
@@ -1217,8 +1220,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .parent(&p)
                                 .object(&record)
                                 .execute()
-                                .await
-                                .expect("Could not create record");
+                                .await?;
+                            // .expect("Could not create record");
                         }
                         DhtOp::RegisterUpdatedContent(signature, update, entry) => {
                             let record = Record::new(
@@ -1230,14 +1233,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 },
                                 entry.as_option().cloned(),
                             );
-                            let p = parent_path
-                                .clone()
-                                .at(
-                                    "entries",
-                                    EntryHashB64::from(update.original_entry_address.clone())
-                                        .to_string(),
-                                )
-                                .expect("Can't build parent path");
+                            let p = parent_path.clone().at(
+                                "entries",
+                                EntryHashB64::from(update.original_entry_address.clone())
+                                    .to_string(),
+                            )?;
+                            // .expect("Can't build parent path");
 
                             let _r: Record = db
                                 .fluent()
@@ -1250,8 +1251,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .parent(&p)
                                 .object(&record)
                                 .execute()
-                                .await
-                                .expect("Could not create record");
+                                .await?;
+                            // .expect("Could not create record");
                         }
                         DhtOp::RegisterDeletedBy(signature, delete) => {
                             let record = Record::new(
@@ -1263,13 +1264,11 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 },
                                 None,
                             );
-                            let p = parent_path
-                                .clone()
-                                .at(
-                                    "records",
-                                    ActionHashB64::from(delete.deletes_address.clone()).to_string(),
-                                )
-                                .expect("Can't build parent path");
+                            let p = parent_path.clone().at(
+                                "records",
+                                ActionHashB64::from(delete.deletes_address.clone()).to_string(),
+                            )?;
+                            // .expect("Can't build parent path");
 
                             let _r: Record = db
                                 .fluent()
@@ -1282,8 +1281,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .parent(&p)
                                 .object(&record)
                                 .execute()
-                                .await
-                                .expect("Could not create record");
+                                .await?;
+                            // .expect("Could not create record");
                         }
                         DhtOp::RegisterDeletedEntryAction(signature, delete) => {
                             let record = Record::new(
@@ -1295,14 +1294,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 },
                                 None,
                             );
-                            let p = parent_path
-                                .clone()
-                                .at(
-                                    "entries",
-                                    EntryHashB64::from(delete.deletes_entry_address.clone())
-                                        .to_string(),
-                                )
-                                .expect("Can't build parent path");
+                            let p = parent_path.clone().at(
+                                "entries",
+                                EntryHashB64::from(delete.deletes_entry_address.clone())
+                                    .to_string(),
+                            )?;
+                            // .expect("Can't build parent path");
 
                             let _r: Record = db
                                 .fluent()
@@ -1315,8 +1312,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .parent(&p)
                                 .object(&record)
                                 .execute()
-                                .await
-                                .expect("Could not create record");
+                                .await?;
+                            // .expect("Could not create record");
                         }
                         DhtOp::StoreRecord(signature, action, record_entry) => {
                             let record = Record::new(
@@ -1338,8 +1335,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .parent(&parent_path)
                                 .object(&record)
                                 .execute()
-                                .await
-                                .expect("Could not create record");
+                                .await?;
+                            // .expect("Could not create record");
                         }
                         DhtOp::StoreEntry(signature, action, record_entry) => {
                             let record = Record::new(
@@ -1361,13 +1358,11 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .parent(&parent_path)
                                 .object(&record_entry)
                                 .execute()
-                                .await
-                                .expect("Could not create entry");
+                                .await?;
+                            // .expect("Could not create entry");
 
-                            let p = parent_path
-                                .clone()
-                                .at("entries", document_id.clone())
-                                .expect("Could not create parent path");
+                            let p = parent_path.clone().at("entries", document_id.clone())?;
+                            // .expect("Could not create parent path");
 
                             let _r: Record = db
                                 .fluent()
@@ -1377,8 +1372,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .parent(&p)
                                 .object(&record)
                                 .execute()
-                                .await
-                                .expect("Could not create entry's record");
+                                .await?;
+                            // .expect("Could not create entry's record");
                         }
                         DhtOp::RegisterAddLink(signature, action) => {
                             let record = Record::new(
@@ -1392,7 +1387,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             let document_id =
                                 AnyLinkableHashB64::from(action.base_address.clone()).to_string();
 
-                            let _r: LinkBaseRecord = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("links")
@@ -1401,14 +1396,14 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .object(&LinkBaseRecord {
                                     base: action.base_address.clone(),
                                 })
-                                .execute()
+                                .execute::<LinkBaseRecord>()
                                 .await
-                                .expect("Could not create link base");
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
 
-                            let p = parent_path
-                                .clone()
-                                .at("links", document_id.clone())
-                                .expect("Could not create links path");
+                            let p = parent_path.clone().at("links", document_id.clone())?;
 
                             let _r: Record = db
                                 .fluent()
@@ -1421,8 +1416,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .parent(&p)
                                 .object(&record)
                                 .execute()
-                                .await
-                                .expect("Could not entry's create record");
+                                .await?;
                         }
                         DhtOp::RegisterRemoveLink(signature, action) => {
                             let record = Record::new(
@@ -1436,7 +1430,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             let document_id =
                                 AnyLinkableHashB64::from(action.base_address.clone()).to_string();
 
-                            let _r: LinkBaseRecord = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("links")
@@ -1445,14 +1439,16 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .object(&LinkBaseRecord {
                                     base: action.base_address.clone(),
                                 })
-                                .execute()
+                                .execute::<LinkBaseRecord>()
                                 .await
-                                .expect("Could not create link base");
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
+                            // .expect("Could not create link base");
 
-                            let p = parent_path
-                                .clone()
-                                .at("links", document_id.clone())
-                                .expect("Could not create links path");
+                            let p = parent_path.clone().at("links", document_id.clone())?;
+                            // .expect("Could not create links path");
 
                             let _r: Record = db
                                 .fluent()
@@ -1465,8 +1461,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .parent(&p)
                                 .object(&record)
                                 .execute()
-                                .await
-                                .expect("Could not entry's create record");
+                                .await?;
+                            // .expect("Could not entry's create record");
                         }
                         _ => {}
                     }
@@ -1598,9 +1594,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
         // .into())
         let db = self.db.clone();
         Ok(async move {
-            let parent_path = db
-                .parent_path("dnas", DnaHashB64::from(dna_hash).to_string())
-                .expect("Could not build parent path");
+            let parent_path = db.parent_path("dnas", DnaHashB64::from(dna_hash).to_string())?;
+            // .expect("Could not build parent path");
 
             match dht_hash.into_primitive() {
                 AnyDhtHashPrimitive::Entry(entry_hash) => {
@@ -1612,12 +1607,11 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         .parent(&parent_path)
                         .obj()
                         .one(document_id.clone())
-                        .await
-                        .expect("Could not get entry");
+                        .await?;
+                    // .expect("Could not get entry");
 
-                    let p = parent_path
-                        .at("entries", document_id)
-                        .expect("Could not build parent path");
+                    let p = parent_path.at("entries", document_id)?;
+                    // .expect("Could not build parent path");
 
                     let mut stream: BoxStream<Record> = db
                         .fluent()
@@ -1626,8 +1620,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         .parent(&p)
                         .obj()
                         .stream_all()
-                        .await
-                        .expect("Could not create stream");
+                        .await?;
+                    // .expect("Could not create stream");
 
                     let mut creates: Vec<Record> = vec![];
                     while let Some(object) = stream.next().await {
@@ -1641,8 +1635,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         .parent(&p)
                         .obj()
                         .stream_all()
-                        .await
-                        .expect("Could not create stream");
+                        .await?;
+                    // .expect("Could not create stream");
 
                     let mut updates: Vec<Record> = vec![];
                     while let Some(object) = stream.next().await {
@@ -1656,8 +1650,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         .parent(&p)
                         .obj()
                         .stream_all()
-                        .await
-                        .expect("Could not create stream");
+                        .await?;
+                    // .expect("Could not create stream");
 
                     let mut deletes: Vec<Record> = vec![];
                     while let Some(object) = stream.next().await {
@@ -1703,8 +1697,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         .parent(&parent_path)
                         .obj()
                         .one(ActionHashB64::from(action_hash).to_string())
-                        .await
-                        .expect("Could not get record");
+                        .await?;
+                    // .expect("Could not get record");
 
                     let wire_record_ops = WireRecordOps {
                         action: record
@@ -1794,14 +1788,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
         let db = self.db.clone();
 
         Ok(async move {
-            let parent_path = db
-                .parent_path("dnas", DnaHashB64::from(dna_hash).to_string())
-                .expect("Could not build parent path");
+            let parent_path = db.parent_path("dnas", DnaHashB64::from(dna_hash).to_string())?;
+            // .expect("Could not build parent path");
             let document_id = AnyLinkableHashB64::from(link_key.base).to_string();
 
-            let p = parent_path
-                .at("links", document_id)
-                .expect("Could not build parent path");
+            let p = parent_path.at("links", document_id)?;
+            // .expect("Could not build parent path");
 
             let mut stream: BoxStream<Record> = db
                 .fluent()
@@ -1810,8 +1802,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                 .parent(&p)
                 .obj()
                 .stream_all()
-                .await
-                .expect("Could not create stream");
+                .await?;
+            // .expect("Could not create stream");
 
             let mut creates: Vec<Record> = vec![];
             while let Some(object) = stream.next().await {
@@ -1835,8 +1827,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                 .parent(&p)
                 .obj()
                 .stream_all()
-                .await
-                .expect("Could not create stream");
+                .await?;
+            // .expect("Could not create stream");
 
             let mut deletes: Vec<Record> = vec![];
             while let Some(object) = stream.next().await {

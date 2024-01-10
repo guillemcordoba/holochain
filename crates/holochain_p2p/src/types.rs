@@ -26,6 +26,10 @@ pub enum HolochainP2pError {
     #[error("InvalidP2pMessage: {0}")]
     InvalidP2pMessage(String),
 
+    /// Invalid P2p Message
+    #[error("Firestore: {0:?}")]
+    Firestore(#[from] firestore::errors::FirestoreError),
+
     /// Other
     #[error("Other: {0}")]
     Other(Box<dyn std::error::Error + Send + Sync>),
