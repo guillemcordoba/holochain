@@ -168,6 +168,8 @@
 
               # Enables the pre-commit hooks
               ${config.pre-commit.installationScript}
+
+              export SERVICE_ACCOUNT_KEY=$(cat /home/guillem/projects/darksoil/rostanga-ce319-434c89109185.json)
             '';
           };
 

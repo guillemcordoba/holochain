@@ -123,3 +123,5 @@ lto = true
 #lair_keystore_api_0_0 = { git = "https://github.com/holochain/lair.git", branch = "release-0.0.x-bump-sodoken", package = "lair_keystore_api" }
 #lair_keystore_client_0_0 = { git = "https://github.com/holochain/lair.git", branch = "release-0.0.x-bump-sodoken", package = "lair_keystore_client" }
 # r2d2_sqlite = { path = "../r2d2-sqlite" }
+
+holochain_wasmer_host = { git = "https://github.com/holochain/holochain-wasmer", branch = "refactor/reinstate-module-cache" }

@@ -12,31 +12,31 @@ ghost_actor::ghost_chan! {
         /// + all new harness agents will also join it
         fn add_space() -> Arc<KitsuneSpace>;
 
-        /// Create a new agent configured to proxy for others.
-        fn add_proxy_agent(nick: String) -> (
-            Arc<KitsuneAgent>,
-            ghost_actor::GhostSender<KitsuneP2p>,
-        );
+        // /// Create a new agent configured to proxy for others.
+        // fn add_proxy_agent(nick: String) -> (
+        //     Arc<KitsuneAgent>,
+        //     ghost_actor::GhostSender<KitsuneP2p>,
+        // );
 
-        /// Create a new directly addressable agent that will
-        /// reject any proxy requests.
-        fn add_direct_agent(nick: String) -> (
-            Arc<KitsuneAgent>,
-            ghost_actor::GhostSender<KitsuneP2p>,
-        );
+        // /// Create a new directly addressable agent that will
+        // /// reject any proxy requests.
+        // fn add_direct_agent(nick: String) -> (
+        //     Arc<KitsuneAgent>,
+        //     ghost_actor::GhostSender<KitsuneP2p>,
+        // );
 
-        /// Create a new directly addressable agent that will
-        /// reject any proxy requests.
-        fn add_publish_only_agent(nick: String) -> (
-            Arc<KitsuneAgent>,
-            ghost_actor::GhostSender<KitsuneP2p>,
-        );
+        // /// Create a new directly addressable agent that will
+        // /// reject any proxy requests.
+        // fn add_publish_only_agent(nick: String) -> (
+        //     Arc<KitsuneAgent>,
+        //     ghost_actor::GhostSender<KitsuneP2p>,
+        // );
 
-        /// Create a new agent that will connect via proxy.
-        fn add_nat_agent(nick: String, proxy_url: url2::Url2) -> (
-            Arc<KitsuneAgent>,
-            ghost_actor::GhostSender<KitsuneP2p>,
-        );
+        // /// Create a new agent that will connect via proxy.
+        // fn add_nat_agent(nick: String, proxy_url: url2::Url2) -> (
+        //     Arc<KitsuneAgent>,
+        //     ghost_actor::GhostSender<KitsuneP2p>,
+        // );
 
         /// Magically exchange peer data between peers in harness
         fn magic_peer_info_exchange() -> ();
