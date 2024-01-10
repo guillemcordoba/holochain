@@ -3694,7 +3694,7 @@ dependencies = [
 [[package]]
 name = "holochain_wasmer_common"
 version = "0.0.90"
-source = "git+https://github.com/holochain/holochain-wasmer?branch=refactor/reinstate-module-cache#febc87cd651e43711ed5f349c8945b6dae936e73"
+source = "git+https://github.com/holochain/holochain-wasmer?branch=refactor/reinstate-module-cache#3aa836d3e40551b3f695a232dbf0c4a84fdec074"
 dependencies = [
  "holochain_serialized_bytes",
  "serde",
@@ -3735,7 +3735,7 @@ dependencies = [
 [[package]]
 name = "holochain_wasmer_host"
 version = "0.0.91"
-source = "git+https://github.com/holochain/holochain-wasmer?branch=refactor/reinstate-module-cache#febc87cd651e43711ed5f349c8945b6dae936e73"
+source = "git+https://github.com/holochain/holochain-wasmer?branch=refactor/reinstate-module-cache#3aa836d3e40551b3f695a232dbf0c4a84fdec074"
 dependencies = [
  "bimap",
  "bytes",
