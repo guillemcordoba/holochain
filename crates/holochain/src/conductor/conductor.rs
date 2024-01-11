@@ -696,6 +696,7 @@ mod dna_impls {
             let dna_def = ribosome.dna_def().clone();
             let code = ribosome.dna_file().code().clone().into_values();
             let zome_defs = get_entry_defs(ribosome).await?;
+            log::warn!("HEYY1");
             self.put_wasm_code(dna_def, code, zome_defs).await
         }
 
@@ -747,8 +748,11 @@ mod dna_impls {
         pub async fn register_dna(&self, dna: DnaFile) -> ConductorResult<()> {
             let ribosome = RealRibosome::new(dna, self.config.data_root_path.clone())?;
             let entry_defs = self.register_dna_wasm(ribosome.clone()).await?;
+            log::warn!("HEYY2");
             self.register_dna_entry_defs(entry_defs);
+            log::warn!("HEYY3");
             self.add_ribosome_to_store(ribosome);
+            log::warn!("HEYY4");
             Ok(())
         }
     }
@@ -1402,6 +1406,7 @@ mod app_impls {
                 self.clone().register_dna(dna).await?;
             }
 
+            log::warn!("HEYY5");
             let cell_ids: Vec<_> = cells_to_create
                 .iter()
                 .map(|(cell_id, _)| cell_id.clone())
