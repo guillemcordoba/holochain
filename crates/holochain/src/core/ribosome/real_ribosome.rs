@@ -350,7 +350,9 @@ impl RealRibosome {
         let module = match &zome.def {
             ZomeDef::Wasm(wasm_zome) => {
                 if let Some(path) = wasm_zome.preserialized_path.as_ref() {
-                    self.runtime_compiled_module(zome.zome_name())?
+                    Arc::new(holochain_wasmer_host::module::get_ios_module_from_file(
+                        path,
+                    )?)
                 } else {
                     self.runtime_compiled_module(zome.zome_name())?
                 }
@@ -769,7 +771,9 @@ impl RibosomeT for RealRibosome {
                 match zome.zome_def() {
                     ZomeDef::Wasm(wasm_zome) => {
                         let module = if let Some(path) = wasm_zome.preserialized_path.as_ref() {
-                            self.runtime_compiled_module(zome.zome_name())?
+                            Arc::new(holochain_wasmer_host::module::get_ios_module_from_file(
+                                path,
+                            )?)
                         } else {
                             self.runtime_compiled_module(zome.zome_name())?
                         };
@@ -1020,31 +1024,27 @@ pub mod wasm_test {
             let conductor = conductor.clone();
             let zome = zome.clone();
             async move {
-                let zome_call_response_on_time = tokio::select! {
+                tokio::select! {
                     _ = conductor.call::<_, CallInfo>(&zome, "call_info", ()) => {true}
                     _ = tokio::time::sleep(Duration::from_secs(10)) => {false}
-                };
-                assert_eq!(
-                    zome_call_response_on_time, true,
-                    "first zome call did not complete in 10 sec"
-                );
+                }
             }
         });
         let zome_call_2 = tokio::spawn({
             let conductor = conductor.clone();
             let zome = zome.clone();
             async move {
-                let zome_call_response_on_time = tokio::select! {
+                tokio::select! {
                     _ = conductor.call::<_, CallInfo>(&zome, "call_info", ()) => {true}
                     _ = tokio::time::sleep(Duration::from_secs(10)) => {false}
-                };
-                assert_eq!(
-                    zome_call_response_on_time, true,
-                    "first zome call did not complete in 10 sec"
-                );
+                }
             }
         });
-        futures::future::join_all([zome_call_1, zome_call_2]).await;
+        let results: Result<Vec<bool>, _> = futures::future::join_all([zome_call_1, zome_call_2])
+            .await
+            .into_iter()
+            .collect();
+        assert_eq!(results.unwrap(), [true, true]);
 
         // run two rounds of two concurrent zome calls
         // having been cached, responses should take less than 10 milliseconds
@@ -1053,31 +1053,28 @@ pub mod wasm_test {
                 let conductor = conductor.clone();
                 let zome = zome.clone();
                 async move {
-                    let zome_call_response_on_time = tokio::select! {
+                    tokio::select! {
                         _ = conductor.call::<_, CallInfo>(&zome, "call_info", ()) => {true}
                         _ = tokio::time::sleep(Duration::from_millis(10)) => {false}
-                    };
-                    assert_eq!(
-                        zome_call_response_on_time, true,
-                        "cached zome call did not complete in 10 ms"
-                    );
+                    }
                 }
             });
             let zome_call_2 = tokio::spawn({
                 let conductor = conductor.clone();
                 let zome = zome.clone();
                 async move {
-                    let zome_call_response_on_time = tokio::select! {
+                    tokio::select! {
                         _ = conductor.call::<_, CallInfo>(&zome, "call_info", ()) => {true}
                         _ = tokio::time::sleep(Duration::from_millis(10)) => {false}
-                    };
-                    assert_eq!(
-                        zome_call_response_on_time, true,
-                        "cached zome call did not complete in 10 ms"
-                    );
+                    }
                 }
             });
-            futures::future::join_all([zome_call_1, zome_call_2]).await;
+            let results: Result<Vec<bool>, _> =
+                futures::future::join_all([zome_call_1, zome_call_2])
+                    .await
+                    .into_iter()
+                    .collect();
+            assert_eq!(results.unwrap(), [true, true]);
         }
 
         // make sure the context map does not retain items
