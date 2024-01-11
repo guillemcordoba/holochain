@@ -82,6 +82,7 @@ use holochain_types::prelude::*;
 use holochain_wasmer_host::module::CacheKey;
 use holochain_wasmer_host::module::InstanceWithStore;
 use holochain_wasmer_host::module::ModuleCache;
+use tracing::*;
 use wasmer::AsStoreMut;
 use wasmer::Exports;
 use wasmer::Function;
