@@ -769,7 +769,7 @@ impl RibosomeT for RealRibosome {
                 match zome.zome_def() {
                     ZomeDef::Wasm(wasm_zome) => {
                         let module = if let Some(path) = wasm_zome.preserialized_path.as_ref() {
-                            Arc::new(holochain_wasmer_host::module::precompiled_module(path)?)
+                            self.runtime_compiled_module(zome.zome_name())?
                         } else {
                             self.runtime_compiled_module(zome.zome_name())?
                         };
