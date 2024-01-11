@@ -227,6 +227,7 @@ impl RealRibosome {
             zome_dependencies: Default::default(),
             module_cache: Arc::new(RwLock::new(ModuleCache::new(maybe_fs_dir))),
         };
+        log::warn!("here1");
 
         // Collect the number of entry and link types
         // for each integrity zome.
@@ -236,6 +237,7 @@ impl RealRibosome {
             .iter()
             .map(|(name, zome)| {
                 let zome = Zome::new(name.clone(), zome.clone().erase_type());
+                log::warn!("here2");
 
                 // Call the const functions that return the number of types.
                 let num_entry_types = match ribosome.get_const_fn(&zome, "__num_entry_types")? {
@@ -247,6 +249,7 @@ impl RealRibosome {
                     }
                     None => EntryDefIndex(0),
                 };
+                log::warn!("here3");
                 let num_link_types = match ribosome.get_const_fn(&zome, "__num_link_types")? {
                     Some(i) => {
                         let i: u8 = i
@@ -260,11 +263,14 @@ impl RealRibosome {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
+        log::warn!("here4");
         // Create the global zome types from the totals.
         let map = GlobalZomeTypes::from_ordered_iterator(iter.into_iter());
 
+        log::warn!("here5");
         ribosome.zome_types = Arc::new(map?);
 
+        log::warn!("here6");
         // Create a map of integrity zome names to ZomeIndexes.
         let integrity_zomes: HashMap<_, _> = ribosome
             .dna_def()
@@ -275,6 +281,7 @@ impl RealRibosome {
             .collect::<Option<_>>()
             .ok_or(ZomeTypesError::ZomeIndexOverflow)?;
 
+        log::warn!("here7");
         // Collect the dependencies for each zome.
         ribosome.zome_dependencies = ribosome
             .dna_def()
@@ -303,10 +310,12 @@ impl RealRibosome {
                     }
                 }
 
+                log::warn!("here8");
                 Ok((zome_name.clone(), dependencies))
             })
             .collect::<RibosomeResult<HashMap<_, _>>>()?
             .into();
+        log::warn!("here9");
 
         Ok(ribosome)
     }

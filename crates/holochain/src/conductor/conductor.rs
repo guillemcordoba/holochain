@@ -751,6 +751,7 @@ mod dna_impls {
 
         /// Install a [`DnaFile`](holochain_types::dna::DnaFile) in this Conductor
         pub async fn register_dna(&self, dna: DnaFile) -> ConductorResult<()> {
+            log::warn!("prehey");
             let ribosome = RealRibosome::new(dna, self.config.data_root_path.clone())?;
             log::warn!("registerdna1");
             let entry_defs = self.register_dna_wasm(ribosome.clone()).await?;
