@@ -693,10 +693,16 @@ mod dna_impls {
             &self,
             ribosome: RealRibosome,
         ) -> ConductorResult<Vec<(EntryDefBufferKey, EntryDef)>> {
+            log::warn!("putwasm1");
             let dna_def = ribosome.dna_def().clone();
+            log::warn!("putwasm2");
             let code = ribosome.dna_file().code().clone().into_values();
+            log::warn!("putwasm3");
             let zome_defs = get_entry_defs(ribosome).await?;
-            self.put_wasm_code(dna_def, code, zome_defs).await
+            log::warn!("putwasm4");
+            let r = self.put_wasm_code(dna_def, code, zome_defs).await?;
+            log::warn!("putwasm5");
+            Ok(r)
         }
 
         pub(crate) async fn put_wasm_code(
@@ -746,8 +752,11 @@ mod dna_impls {
         /// Install a [`DnaFile`](holochain_types::dna::DnaFile) in this Conductor
         pub async fn register_dna(&self, dna: DnaFile) -> ConductorResult<()> {
             let ribosome = RealRibosome::new(dna, self.config.data_root_path.clone())?;
+            log::warn!("registerdna1");
             let entry_defs = self.register_dna_wasm(ribosome.clone()).await?;
+            log::warn!("registerdna2");
             self.register_dna_entry_defs(entry_defs);
+            log::warn!("registerdna3");
             self.add_ribosome_to_store(ribosome);
             log::warn!("HEYY4");
             Ok(())
