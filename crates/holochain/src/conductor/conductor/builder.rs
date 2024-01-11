@@ -286,7 +286,7 @@ impl ConductorBuilder {
             .start_scheduler(holochain_zome_types::schedule::SCHEDULER_INTERVAL)
             .await;
 
-        tokio::task::spawn(p2p_event_task(p2p_evt, conductor.clone()));
+        // tokio::task::spawn(p2p_event_task(p2p_evt, conductor.clone()));
 
         let tm = conductor.task_manager();
         let conductor2 = conductor.clone();
