@@ -260,6 +260,7 @@ impl RealRibosome {
                     }
                     None => LinkType(0),
                 };
+                log::warn!("here3.1");
                 RibosomeResult::Ok((num_entry_types, num_link_types))
             })
             .collect::<Result<Vec<_>, _>>()?;
