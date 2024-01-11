@@ -250,7 +250,7 @@ impl RealRibosome {
                     }
                     None => EntryDefIndex(0),
                 };
-                log::warn!("here3");
+                log::warn!("here3 {zome:?}");
                 let num_link_types = match ribosome.get_const_fn(&zome, "__num_link_types")? {
                     Some(i) => {
                         let i: u8 = i
