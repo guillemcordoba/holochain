@@ -1076,6 +1076,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
                 Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
                 Err(err) => Err(HolochainP2pError::Firestore(err)),
             }?;
+
+            tracing::log::error!("Joined worked ok");
             Ok(())
         }
         .boxed()
