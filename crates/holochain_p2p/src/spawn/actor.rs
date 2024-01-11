@@ -1209,7 +1209,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                     .to_string(),
                             )?;
 
-                            let _r: Record = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("updates")
@@ -1219,8 +1219,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 )
                                 .parent(&p)
                                 .object(&record)
-                                .execute()
-                                .await?;
+                                .execute::<Record>()
+                                .await
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
                             // .expect("Could not create record");
                         }
                         DhtOp::RegisterUpdatedContent(signature, update, entry) => {
@@ -1240,7 +1244,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             )?;
                             // .expect("Can't build parent path");
 
-                            let _r: Record = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("updates")
@@ -1250,8 +1254,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 )
                                 .parent(&p)
                                 .object(&record)
-                                .execute()
-                                .await?;
+                                .execute::<Record>()
+                                .await
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
                             // .expect("Could not create record");
                         }
                         DhtOp::RegisterDeletedBy(signature, delete) => {
@@ -1270,7 +1278,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             )?;
                             // .expect("Can't build parent path");
 
-                            let _r: Record = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("deletes")
@@ -1280,8 +1288,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 )
                                 .parent(&p)
                                 .object(&record)
-                                .execute()
-                                .await?;
+                                .execute::<Record>()
+                                .await
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
                             // .expect("Could not create record");
                         }
                         DhtOp::RegisterDeletedEntryAction(signature, delete) => {
@@ -1301,7 +1313,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             )?;
                             // .expect("Can't build parent path");
 
-                            let _r: Record = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("deletes")
@@ -1311,8 +1323,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 )
                                 .parent(&p)
                                 .object(&record)
-                                .execute()
-                                .await?;
+                                .execute::<Record>()
+                                .await
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
                             // .expect("Could not create record");
                         }
                         DhtOp::StoreRecord(signature, action, record_entry) => {
@@ -1324,7 +1340,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 record_entry.as_option().cloned(),
                             );
 
-                            let _r: Record = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("records")
@@ -1334,8 +1350,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 )
                                 .parent(&parent_path)
                                 .object(&record)
-                                .execute()
-                                .await?;
+                                .execute::<Record>()
+                                .await
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
                             // .expect("Could not create record");
                         }
                         DhtOp::StoreEntry(signature, action, record_entry) => {
@@ -1350,29 +1370,37 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             let document_id =
                                 EntryHashB64::from(action.entry().clone()).to_string();
 
-                            let _r: Entry = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("entries")
                                 .document_id(document_id.clone())
                                 .parent(&parent_path)
                                 .object(&record_entry)
-                                .execute()
-                                .await?;
+                                .execute::<Entry>()
+                                .await
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
                             // .expect("Could not create entry");
 
                             let p = parent_path.clone().at("entries", document_id.clone())?;
                             // .expect("Could not create parent path");
 
-                            let _r: Record = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("create")
                                 .document_id(document_id)
                                 .parent(&p)
                                 .object(&record)
-                                .execute()
-                                .await?;
+                                .execute::<Record>()
+                                .await
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
                             // .expect("Could not create entry's record");
                         }
                         DhtOp::RegisterAddLink(signature, action) => {
@@ -1405,7 +1433,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
 
                             let p = parent_path.clone().at("links", document_id.clone())?;
 
-                            let _r: Record = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("creates")
@@ -1415,8 +1443,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 )
                                 .parent(&p)
                                 .object(&record)
-                                .execute()
-                                .await?;
+                                .execute::<Record>()
+                                .await
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
                         }
                         DhtOp::RegisterRemoveLink(signature, action) => {
                             let record = Record::new(
@@ -1450,7 +1482,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             let p = parent_path.clone().at("links", document_id.clone())?;
                             // .expect("Could not create links path");
 
-                            let _r: Record = db
+                            match db
                                 .fluent()
                                 .insert()
                                 .into("deletes")
@@ -1460,8 +1492,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 )
                                 .parent(&p)
                                 .object(&record)
-                                .execute()
-                                .await?;
+                                .execute::<Record>()
+                                .await
+                            {
+                                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+                                Err(err) => Err(HolochainP2pError::Firestore(err)),
+                            }?;
                             // .expect("Could not entry's create record");
                         }
                         _ => {}
