@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Fix: Call contexts of internal callbacks like `validate` were not cleaned up from an in-memory map. Now external as well as internal callbacks remove the call contexts from memory. This is covered by a test.
 - **BREAKING CHANGE:** Wasmer-related items from `holochain_types` have been moved to crate `holochain_wasmer_host::module`.
 
+## 0.3.0-beta-dev.32
+
+## 0.3.0-beta-dev.31
+
 ## 0.3.0-beta-dev.30
 
 ## 0.3.0-beta-dev.29
