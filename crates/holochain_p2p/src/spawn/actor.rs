@@ -334,7 +334,7 @@ pub(crate) struct HolochainP2pActor {
     db: FirestoreDb,
     // config: kitsune_p2p_types::config::KitsuneP2pConfig,
     // evt_sender: WrapEvtSender,
-    // kitsune_p2p: ghost_actor::GhostSender<kitsune_p2p::actor::KitsuneP2p>,
+    kitsune_p2p: ghost_actor::GhostSender<kitsune_p2p::actor::KitsuneP2p>,
     // host: kitsune_p2p::HostApi,
 }
 
@@ -385,10 +385,10 @@ impl HolochainP2pActor {
         evt_sender: futures::channel::mpsc::Sender<HolochainP2pEvent>,
         host: kitsune_p2p::HostApi,
     ) -> HolochainP2pResult<Self> {
-        // let (kitsune_p2p, kitsune_p2p_events) =
-        //     kitsune_p2p::spawn_kitsune_p2p(config.clone(), tls_config, host.clone()).await?;
+        let (kitsune_p2p, kitsune_p2p_events) =
+            kitsune_p2p::spawn_kitsune_p2p(config.clone(), tls_config, host.clone()).await?;
 
-        // channel_factory.attach_receiver(kitsune_p2p_events).await?;
+        channel_factory.attach_receiver(kitsune_p2p_events).await?;
 
         let db = db().await;
 
@@ -396,7 +396,7 @@ impl HolochainP2pActor {
             db,
             // config,
             // evt_sender: WrapEvtSender(evt_sender),
-            // kitsune_p2p,
+            kitsune_p2p,
             // host,
         })
     }
@@ -744,84 +744,84 @@ impl kitsune_p2p::event::KitsuneP2pEventHandler for HolochainP2pActor {
         to_agent: Arc<kitsune_p2p::KitsuneAgent>,
         payload: Vec<u8>,
     ) -> kitsune_p2p::event::KitsuneP2pEventHandlerResult<Vec<u8>> {
-        unimplemented!()
-        // let space = DnaHash::from_kitsune(&space);
-        // let to_agent = AgentPubKey::from_kitsune(&to_agent);
+        // unimplemented!()
+        let space = DnaHash::from_kitsune(&space);
+        let to_agent = AgentPubKey::from_kitsune(&to_agent);
 
-        // let request =
-        //     crate::wire::WireMessage::decode(payload.as_ref()).map_err(HolochainP2pError::from)?;
+        let request =
+            crate::wire::WireMessage::decode(payload.as_ref()).map_err(HolochainP2pError::from)?;
 
-        // match request {
-        //     crate::wire::WireMessage::CallRemote {
-        //         zome_name,
-        //         fn_name,
-        //         cap_secret,
-        //         data,
-        //         from_agent,
-        //         signature,
-        //         to_agent,
-        //         nonce,
-        //         expires_at,
-        //     } => self.handle_incoming_call_remote(
-        //         space, from_agent, signature, to_agent, zome_name, fn_name, cap_secret, data,
-        //         *nonce, expires_at,
-        //     ),
-        //     crate::wire::WireMessage::CallRemoteMulti {
-        //         zome_name,
-        //         fn_name,
-        //         cap_secret,
-        //         data,
-        //         from_agent,
-        //         to_agents,
-        //         nonce,
-        //         expires_at,
-        //     } => {
-        //         match to_agents
-        //             .into_iter()
-        //             .find(|(_signature, agent)| agent == &to_agent)
-        //         {
-        //             Some((signature, to_agent)) => self.handle_incoming_call_remote(
-        //                 space, from_agent, signature, to_agent, zome_name, fn_name, cap_secret,
-        //                 data, *nonce, expires_at,
-        //             ),
-        //             None => Err(HolochainP2pError::RoutingAgentError(to_agent).into()),
-        //         }
-        //     }
-        //     crate::wire::WireMessage::Get { dht_hash, options } => {
-        //         self.handle_incoming_get(space, to_agent, dht_hash, options)
-        //     }
-        //     crate::wire::WireMessage::GetMeta { dht_hash, options } => {
-        //         self.handle_incoming_get_meta(space, to_agent, dht_hash, options)
-        //     }
-        //     crate::wire::WireMessage::GetLinks { link_key, options } => {
-        //         self.handle_incoming_get_links(space, to_agent, link_key, options)
-        //     }
-        //     WireMessage::CountLinks { query } => {
-        //         self.handle_incoming_count_links(space, to_agent, query)
-        //     }
-        //     crate::wire::WireMessage::GetAgentActivity {
-        //         agent,
-        //         query,
-        //         options,
-        //     } => self.handle_incoming_get_agent_activity(space, to_agent, agent, query, options),
-        //     crate::wire::WireMessage::MustGetAgentActivity { agent, filter } => {
-        //         self.handle_incoming_must_get_agent_activity(space, to_agent, agent, filter)
-        //     }
-        //     crate::wire::WireMessage::ValidationReceipts { .. } => {
-        //         Err(HolochainP2pError::invalid_p2p_message(
-        //             "invalid: validation receipts are now notifications rather than requests, please upgrade".to_string(),
-        //         )
-        //             .into())
-        //     }
-        //     // holochain_p2p only broadcasts this message.
-        //     crate::wire::WireMessage::CountersigningSessionNegotiation { .. }
-        //     | crate::wire::WireMessage::PublishCountersign { .. } => {
-        //         Err(HolochainP2pError::invalid_p2p_message(
-        //             "invalid: countersigning messages are broadcast, not requests".to_string(),
-        //         )
-        //         .into())
-        //     }
-        // }
+        match request {
+            crate::wire::WireMessage::CallRemote {
+                zome_name,
+                fn_name,
+                cap_secret,
+                data,
+                from_agent,
+                signature,
+                to_agent,
+                nonce,
+                expires_at,
+            } => self.handle_incoming_call_remote(
+                space, from_agent, signature, to_agent, zome_name, fn_name, cap_secret, data,
+                *nonce, expires_at,
+            ),
+            crate::wire::WireMessage::CallRemoteMulti {
+                zome_name,
+                fn_name,
+                cap_secret,
+                data,
+                from_agent,
+                to_agents,
+                nonce,
+                expires_at,
+            } => {
+                match to_agents
+                    .into_iter()
+                    .find(|(_signature, agent)| agent == &to_agent)
+                {
+                    Some((signature, to_agent)) => self.handle_incoming_call_remote(
+                        space, from_agent, signature, to_agent, zome_name, fn_name, cap_secret,
+                        data, *nonce, expires_at,
+                    ),
+                    None => Err(HolochainP2pError::RoutingAgentError(to_agent).into()),
+                }
+            }
+            crate::wire::WireMessage::Get { dht_hash, options } => {
+                self.handle_incoming_get(space, to_agent, dht_hash, options)
+            }
+            crate::wire::WireMessage::GetMeta { dht_hash, options } => {
+                self.handle_incoming_get_meta(space, to_agent, dht_hash, options)
+            }
+            crate::wire::WireMessage::GetLinks { link_key, options } => {
+                self.handle_incoming_get_links(space, to_agent, link_key, options)
+            }
+            WireMessage::CountLinks { query } => {
+                self.handle_incoming_count_links(space, to_agent, query)
+            }
+            crate::wire::WireMessage::GetAgentActivity {
+                agent,
+                query,
+                options,
+            } => self.handle_incoming_get_agent_activity(space, to_agent, agent, query, options),
+            crate::wire::WireMessage::MustGetAgentActivity { agent, filter } => {
+                self.handle_incoming_must_get_agent_activity(space, to_agent, agent, filter)
+            }
+            crate::wire::WireMessage::ValidationReceipts { .. } => {
+                Err(HolochainP2pError::invalid_p2p_message(
+                    "invalid: validation receipts are now notifications rather than requests, please upgrade".to_string(),
+                )
+                    .into())
+            }
+            // holochain_p2p only broadcasts this message.
+            crate::wire::WireMessage::CountersigningSessionNegotiation { .. }
+            | crate::wire::WireMessage::PublishCountersign { .. } => {
+                Err(HolochainP2pError::invalid_p2p_message(
+                    "invalid: countersigning messages are broadcast, not requests".to_string(),
+                )
+                .into())
+            }
+        }
     }
 
     /// Handle an incoming notify.
@@ -1104,25 +1104,25 @@ impl HolochainP2pHandler for HolochainP2pActor {
         nonce: Nonce256Bits,
         expires_at: Timestamp,
     ) -> HolochainP2pHandlerResult<SerializedBytes> {
-        // let space = dna_hash.into_kitsune();
-        // let to_agent_kitsune = to_agent.clone().into_kitsune();
+        let space = dna_hash.into_kitsune();
+        let to_agent_kitsune = to_agent.clone().into_kitsune();
 
-        // let req = crate::wire::WireMessage::call_remote(
-        //     zome_name, fn_name, from_agent, signature, to_agent, cap_secret, payload, nonce,
-        //     expires_at,
-        // )
-        // .encode()?;
+        let req = crate::wire::WireMessage::call_remote(
+            zome_name, fn_name, from_agent, signature, to_agent, cap_secret, payload, nonce,
+            expires_at,
+        )
+        .encode()?;
 
-        // let kitsune_p2p = self.kitsune_p2p.clone();
-        // Ok(async move {
-        //     let result: Vec<u8> = kitsune_p2p
-        //         .rpc_single(space, to_agent_kitsune, req, None)
-        //         .await?;
-        //     Ok(UnsafeBytes::from(result).into())
-        // }
-        // .boxed()
-        // .into())
-        unimplemented!()
+        let kitsune_p2p = self.kitsune_p2p.clone();
+        Ok(async move {
+            let result: Vec<u8> = kitsune_p2p
+                .rpc_single(space, to_agent_kitsune, req, None)
+                .await?;
+            Ok(UnsafeBytes::from(result).into())
+        }
+        .boxed()
+        .into())
+        // unimplemented!()
     }
 
     /// Dispatch an outgoing signal.

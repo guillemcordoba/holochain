@@ -62,52 +62,54 @@ pub fn call(
 
                         let result: Result<ZomeCallResponse, RuntimeError> = match target {
                             CallTarget::NetworkAgent(target_agent) => {
-                                let this_cell_id = call_context
-                                    .host_context()
-                                    .call_zome_handle()
-                                    .cell_id()
-                                    .clone();
                                 let zome_call_unsigned = ZomeCallUnsigned {
-                                    cell_id: this_cell_id,
+                                    provenance: provenance.clone(),
+                                    cell_id: CellId::new(
+                                        ribosome.dna_def().as_hash().clone(),
+                                        target_agent.clone(),
+                                    ),
                                     zome_name,
                                     fn_name,
-                                    payload,
                                     cap_secret,
-                                    provenance,
+                                    payload,
                                     nonce,
                                     expires_at,
                                 };
-                                let call = ZomeCall::try_from_unsigned_zome_call(
-                                    call_context.host_context.keystore(),
-                                    zome_call_unsigned,
-                                )
-                                .await
-                                .map_err(|e| -> RuntimeError {
-                                    wasm_error!(WasmErrorInner::Host(e.to_string())).into()
-                                })?;
                                 match call_context
                                     .host_context()
-                                    .call_zome_handle()
-                                    .call_zome(
-                                        call,
-                                        call_context
-                                            .host_context()
-                                            .workspace_write()
-                                            .clone()
-                                            .try_into()
-                                            .expect("Must have source chain to make zome call"),
+                                    .network()
+                                    .call_remote(
+                                        provenance.clone(),
+                                        zome_call_unsigned
+                                            .provenance
+                                            .sign_raw(
+                                                call_context.host_context.keystore(),
+                                                zome_call_unsigned.data_to_sign().map_err(
+                                                    |e| -> RuntimeError {
+                                                        wasm_error!(e.to_string()).into()
+                                                    },
+                                                )?,
+                                            )
+                                            .await
+                                            .map_err(|e| -> RuntimeError {
+                                                wasm_error!(WasmErrorInner::Host(e.to_string()))
+                                                    .into()
+                                            })?,
+                                        target_agent,
+                                        zome_call_unsigned.zome_name,
+                                        zome_call_unsigned.fn_name,
+                                        zome_call_unsigned.cap_secret,
+                                        zome_call_unsigned.payload,
+                                        zome_call_unsigned.nonce,
+                                        zome_call_unsigned.expires_at,
                                     )
                                     .await
                                 {
-                                    Ok(Ok(zome_call_response)) => Ok(zome_call_response),
-                                    Ok(Err(ribosome_error)) => Err(wasm_error!(
-                                        WasmErrorInner::Host(ribosome_error.to_string())
-                                    )
-                                    .into()),
-                                    Err(conductor_api_error) => Err(wasm_error!(
-                                        WasmErrorInner::Host(conductor_api_error.to_string())
-                                    )
-                                    .into()),
+                                    Ok(serialized_bytes) => {
+                                        ZomeCallResponse::try_from(serialized_bytes)
+                                            .map_err(|e| -> RuntimeError { wasm_error!(e).into() })
+                                    }
+                                    Err(e) => Ok(ZomeCallResponse::NetworkError(e.to_string())),
                                 }
                             }
                             CallTarget::ConductorCell(target_cell) => {
