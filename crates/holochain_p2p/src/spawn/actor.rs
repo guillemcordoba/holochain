@@ -1041,7 +1041,6 @@ impl ghost_actor::GhostHandler<HolochainP2p> for HolochainP2pActor {}
 #[derive(Serialize, Deserialize, Debug)]
 struct DnaRecord {
     dna_hash: DnaHash,
-    timestamp: Timestamp,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -1066,10 +1065,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                 .insert()
                 .into("dnas")
                 .document_id(DnaHashB64::from(dna_hash.clone()).to_string())
-                .object(&DnaRecord {
-                    dna_hash,
-                    timestamp: Timestamp::now(),
-                })
+                .object(&DnaRecord { dna_hash })
                 .execute::<DnaRecord>()
                 .await
             {
