@@ -62,6 +62,7 @@ pub fn call(
 
                         let result: Result<ZomeCallResponse, RuntimeError> = match target {
                             CallTarget::NetworkAgent(target_agent) => {
+                                tracing::log::error!("HEEEY {zome_name} {fn_name}");
                                 let zome_call_unsigned = ZomeCallUnsigned {
                                     provenance: provenance.clone(),
                                     cell_id: CellId::new(
