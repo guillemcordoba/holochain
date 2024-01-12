@@ -1967,15 +1967,12 @@ mod app_status_impls {
             let cell_ids: Vec<_> = cell_ids.into_iter().map(Result::unwrap).collect();
             let failed_joins = failed_joins.into_iter().map(Result::unwrap_err);
 
-            tracing::error!("HERE2");
             // Update the status of the cells which were able to join the network
             // (may or may not be all cells which were added)
             self.update_cell_status(cell_ids.iter().map(|c| (c, CellStatus::Joined)));
-            tracing::error!("HERE3");
 
             self.update_cell_status(failed_joins);
 
-            tracing::error!("HERE4");
             cell_ids
         }
 
