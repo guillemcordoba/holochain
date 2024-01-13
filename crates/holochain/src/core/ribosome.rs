@@ -239,7 +239,7 @@ impl HostContext {
                 call_zome_handle, ..
             })
             | Self::Init(InitHostAccess { call_zome_handle, .. })
-            | Self::Init(PostCommitHostAccess{ call_zome_handle, .. })
+            | Self::PostCommit(PostCommitHostAccess{ call_zome_handle, .. })
             => call_zome_handle,
             _ => panic!(
                 "Gave access to a host function that uses the call zome handle without providing a call zome handle"

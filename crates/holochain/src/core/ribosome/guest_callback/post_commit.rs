@@ -109,7 +109,7 @@ pub async fn send_post_commit(
                     keystore: keystore.clone(),
                     network: network.clone(),
                     signal_tx: conductor_handle.signal_broadcaster(),
-                    call_zome_handle,
+                    call_zome_handle: call_zome_handle.clone(),
                 },
                 invocation: PostCommitInvocation::new(zome, actions.clone()),
                 cell_id: cell_id.clone(),
