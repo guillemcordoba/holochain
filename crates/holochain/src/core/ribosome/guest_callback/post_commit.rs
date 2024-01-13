@@ -1,3 +1,6 @@
+use crate::conductor::api::CellConductorApi;
+use crate::conductor::api::CellConductorApiT;
+use crate::conductor::api::CellConductorReadHandle;
 use crate::conductor::interface::SignalBroadcaster;
 use crate::conductor::ConductorHandle;
 use crate::core::ribosome::FnComponents;
@@ -34,6 +37,7 @@ pub struct PostCommitHostAccess {
     pub keystore: MetaLairClient,
     pub network: HolochainP2pDna,
     pub signal_tx: SignalBroadcaster,
+    pub call_zome_handle: CellConductorReadHandle,
 }
 
 impl std::fmt::Debug for PostCommitHostAccess {
@@ -92,6 +96,9 @@ pub async fn send_post_commit(
 ) -> Result<(), tokio::sync::mpsc::error::SendError<()>> {
     let cell_id = workspace.source_chain().cell_id();
 
+    let call_zome_handle =
+        CellConductorApi::new(conductor_handle.clone(), cell_id).into_call_zome_handle();
+
     for zome in zomes {
         conductor_handle
             .post_commit_permit()
@@ -102,6 +109,7 @@ pub async fn send_post_commit(
                     keystore: keystore.clone(),
                     network: network.clone(),
                     signal_tx: conductor_handle.signal_broadcaster(),
+                    call_zome_handle,
                 },
                 invocation: PostCommitInvocation::new(zome, actions.clone()),
                 cell_id: cell_id.clone(),
