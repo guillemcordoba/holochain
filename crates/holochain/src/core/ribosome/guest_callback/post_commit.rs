@@ -97,7 +97,7 @@ pub async fn send_post_commit(
     let cell_id = workspace.source_chain().cell_id();
 
     let call_zome_handle =
-        CellConductorApi::new(conductor_handle.clone(), cell_id).into_call_zome_handle();
+        CellConductorApi::new(conductor_handle.clone(), cell_id.clone()).into_call_zome_handle();
 
     for zome in zomes {
         conductor_handle
