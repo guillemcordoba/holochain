@@ -1634,7 +1634,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
             match dht_hash.into_primitive() {
                 AnyDhtHashPrimitive::Entry(entry_hash) => {
                     let document_id = EntryHashB64::from(entry_hash).to_string();
-                    let entry: Option<Entry> = db
+                    let mut entry: Option<Entry> = db
                         .fluent()
                         .select()
                         .by_id_in("entries")
@@ -1692,6 +1692,21 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         deletes.push(object);
                     }
 
+                    let mut entry_data: Option<EntryData> = None;
+
+                    if let Some(entry) = entry {
+                        if let Some(create) = creates.first() {
+                            entry_data = Some(EntryData {
+                                entry,
+                                entry_type: create
+                                    .action()
+                                    .entry_type()
+                                    .cloned()
+                                    .expect("Misplaced create"),
+                            });
+                        }
+                    }
+
                     let wire_entry_ops = WireEntryOps {
                         creates: creates
                             .iter()
@@ -1699,16 +1714,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             .filter_map(|c| WireNewEntryAction::try_from(c.signed_action).ok())
                             .map(|c| Judged::valid(c))
                             .collect(),
-                        entry: entry.map(|entry| EntryData {
-                            entry,
-                            entry_type: creates
-                                .first()
-                                .expect("Could not find a create for this entry")
-                                .action()
-                                .entry_type()
-                                .cloned()
-                                .expect("Create record does not have an entry type"),
-                        }),
+                        entry: entry_data,
                         deletes: deletes
                             .into_iter()
                             .filter_map(|d| WireDelete::try_from(d.signed_action).ok())
