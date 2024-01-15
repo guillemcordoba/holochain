@@ -332,6 +332,10 @@ impl WrapEvtSender {
 
 pub(crate) struct HolochainP2pActor {
     db: FirestoreDb,
+    cache: firestore::FirestoreCache<
+        FirestorePersistentCacheBackend,
+        FirestoreTempFilesListenStateStorage,
+    >,
     // config: kitsune_p2p_types::config::KitsuneP2pConfig,
     // evt_sender: WrapEvtSender,
     // kitsune_p2p: ghost_actor::GhostSender<kitsune_p2p::actor::KitsuneP2p>,
@@ -385,19 +389,38 @@ impl HolochainP2pActor {
         evt_sender: futures::channel::mpsc::Sender<HolochainP2pEvent>,
         host: kitsune_p2p::HostApi,
     ) -> HolochainP2pResult<Self> {
+        use firestore::*;
         // let (kitsune_p2p, kitsune_p2p_events) =
         //     kitsune_p2p::spawn_kitsune_p2p(config.clone(), tls_config, host.clone()).await?;
 
         // channel_factory.attach_receiver(kitsune_p2p_events).await?;
 
         let db = db().await;
+        let mut cache = FirestoreCache::new(
+            "example-persistent-cache".into(),
+            &db,
+            FirestorePersistentCacheBackend::new(
+                FirestoreCacheConfiguration::new().add_collection_config(
+                    &db,
+                    FirestoreCacheCollectionConfiguration::new(
+                        "dnas",
+                        FirestoreListenerTarget::new(1000),
+                        FirestoreCacheCollectionLoadMode::PreloadAllIfEmpty,
+                    ),
+                ),
+            )?,
+            FirestoreTempFilesListenStateStorage::new(),
+        )
+        .await?;
+
+        cache.load().await?;
 
         Ok(Self {
             db,
-            // config,
-            // evt_sender: WrapEvtSender(evt_sender),
-            // kitsune_p2p,
-            // host,
+            cache, // config,
+                   // evt_sender: WrapEvtSender(evt_sender),
+                   // kitsune_p2p,
+                   // host,
         })
     }
 
@@ -1186,23 +1209,18 @@ impl HolochainP2pHandler for HolochainP2pActor {
         let db = self.db.clone();
         Ok(async move {
             if let Some(ops) = reflect_ops {
-                // Insert DNA
-
                 let parent_path = db.parent_path("dnas", DnaHashB64::from(dna_hash).to_string())?;
                 for op in ops {
                     match op {
                         DhtOp::RegisterUpdatedRecord(signature, update, entry) => {
-                            let record = Record::new(
-                                SignedHashed {
-                                    hashed: HoloHashed::from_content_sync(Action::Update(
-                                        update.clone(),
-                                    )),
-                                    signature,
-                                },
-                                entry.as_option().cloned(),
-                            );
+                            let action = SignedHashed {
+                                hashed: HoloHashed::from_content_sync(Action::Update(
+                                    update.clone(),
+                                )),
+                                signature,
+                            };
                             let p = parent_path.clone().at(
-                                "records",
+                                "actions",
                                 ActionHashB64::from(update.original_action_address.clone())
                                     .to_string(),
                             )?;
@@ -1212,12 +1230,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .insert()
                                 .into("updates")
                                 .document_id(
-                                    ActionHashB64::from(record.action_address().clone())
+                                    ActionHashB64::from(action.action_address().clone())
                                         .to_string(),
                                 )
                                 .parent(&p)
-                                .object(&record)
-                                .execute::<Record>()
+                                .object(&action)
+                                .execute::<SignedHashed<Action>>()
                                 .await
                             {
                                 Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
@@ -1226,15 +1244,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             // .expect("Could not create record");
                         }
                         DhtOp::RegisterUpdatedContent(signature, update, entry) => {
-                            let record = Record::new(
-                                SignedHashed {
-                                    hashed: HoloHashed::from_content_sync(Action::Update(
-                                        update.clone(),
-                                    )),
-                                    signature,
-                                },
-                                entry.as_option().cloned(),
-                            );
+                            let action = SignedHashed {
+                                hashed: HoloHashed::from_content_sync(Action::Update(
+                                    update.clone(),
+                                )),
+                                signature,
+                            };
                             let p = parent_path.clone().at(
                                 "entries",
                                 EntryHashB64::from(update.original_entry_address.clone())
@@ -1247,12 +1262,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .insert()
                                 .into("updates")
                                 .document_id(
-                                    ActionHashB64::from(record.action_address().clone())
+                                    ActionHashB64::from(action.action_address().clone())
                                         .to_string(),
                                 )
                                 .parent(&p)
-                                .object(&record)
-                                .execute::<Record>()
+                                .object(&action)
+                                .execute::<SignedActionHashed>()
                                 .await
                             {
                                 Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
@@ -1261,17 +1276,14 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             // .expect("Could not create record");
                         }
                         DhtOp::RegisterDeletedBy(signature, delete) => {
-                            let record = Record::new(
-                                SignedHashed {
-                                    hashed: HoloHashed::from_content_sync(Action::Delete(
-                                        delete.clone(),
-                                    )),
-                                    signature,
-                                },
-                                None,
-                            );
+                            let action = SignedHashed {
+                                hashed: HoloHashed::from_content_sync(Action::Delete(
+                                    delete.clone(),
+                                )),
+                                signature,
+                            };
                             let p = parent_path.clone().at(
-                                "records",
+                                "actions",
                                 ActionHashB64::from(delete.deletes_address.clone()).to_string(),
                             )?;
                             // .expect("Can't build parent path");
@@ -1281,12 +1293,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .insert()
                                 .into("deletes")
                                 .document_id(
-                                    ActionHashB64::from(record.action_address().clone())
+                                    ActionHashB64::from(action.action_address().clone())
                                         .to_string(),
                                 )
                                 .parent(&p)
-                                .object(&record)
-                                .execute::<Record>()
+                                .object(&action)
+                                .execute::<SignedActionHashed>()
                                 .await
                             {
                                 Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
@@ -1295,15 +1307,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             // .expect("Could not create record");
                         }
                         DhtOp::RegisterDeletedEntryAction(signature, delete) => {
-                            let record = Record::new(
-                                SignedHashed {
-                                    hashed: HoloHashed::from_content_sync(Action::Delete(
-                                        delete.clone(),
-                                    )),
-                                    signature,
-                                },
-                                None,
-                            );
+                            let action = SignedHashed {
+                                hashed: HoloHashed::from_content_sync(Action::Delete(
+                                    delete.clone(),
+                                )),
+                                signature,
+                            };
                             let p = parent_path.clone().at(
                                 "entries",
                                 EntryHashB64::from(delete.deletes_entry_address.clone())
@@ -1316,12 +1325,12 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .insert()
                                 .into("deletes")
                                 .document_id(
-                                    ActionHashB64::from(record.action_address().clone())
+                                    ActionHashB64::from(action.action_address().clone())
                                         .to_string(),
                                 )
                                 .parent(&p)
-                                .object(&record)
-                                .execute::<Record>()
+                                .object(&action)
+                                .execute::<SignedActionHashed>()
                                 .await
                             {
                                 Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
@@ -1330,25 +1339,22 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             // .expect("Could not create record");
                         }
                         DhtOp::StoreRecord(signature, action, record_entry) => {
-                            let record = Record::new(
-                                SignedHashed {
-                                    hashed: HoloHashed::from_content_sync(action),
-                                    signature,
-                                },
-                                record_entry.as_option().cloned(),
-                            );
+                            let action = SignedHashed {
+                                hashed: HoloHashed::from_content_sync(action.clone()),
+                                signature,
+                            };
 
                             match db
                                 .fluent()
                                 .insert()
-                                .into("records")
+                                .into("actions")
                                 .document_id(
-                                    ActionHashB64::from(record.action_address().clone())
+                                    ActionHashB64::from(action.action_address().clone())
                                         .to_string(),
                                 )
                                 .parent(&parent_path)
-                                .object(&record)
-                                .execute::<Record>()
+                                .object(&action)
+                                .execute::<SignedActionHashed>()
                                 .await
                             {
                                 Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
@@ -1356,17 +1362,16 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             }?;
                             // .expect("Could not create record");
                         }
-                        DhtOp::StoreEntry(signature, action, record_entry) => {
-                            let record = Record::new(
-                                SignedHashed {
-                                    hashed: HoloHashed::from_content_sync(action.clone().into()),
-                                    signature,
-                                },
-                                Some(record_entry.clone()),
-                            );
+                        DhtOp::StoreEntry(signature, new_entry_action, record_entry) => {
+                            let action = SignedHashed {
+                                hashed: HoloHashed::from_content_sync(Action::from(
+                                    new_entry_action.clone(),
+                                )),
+                                signature,
+                            };
 
                             let document_id =
-                                EntryHashB64::from(action.entry().clone()).to_string();
+                                EntryHashB64::from(new_entry_action.entry().clone()).to_string();
 
                             match db
                                 .fluent()
@@ -1389,11 +1394,11 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             match db
                                 .fluent()
                                 .insert()
-                                .into("create")
+                                .into("creates")
                                 .document_id(document_id)
                                 .parent(&p)
-                                .object(&record)
-                                .execute::<Record>()
+                                .object(&action)
+                                .execute::<SignedActionHashed>()
                                 .await
                             {
                                 Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
@@ -1401,17 +1406,15 @@ impl HolochainP2pHandler for HolochainP2pActor {
                             }?;
                             // .expect("Could not create entry's record");
                         }
-                        DhtOp::RegisterAddLink(signature, action) => {
-                            let record = Record::new(
-                                SignedHashed {
-                                    hashed: HoloHashed::from_content_sync(action.clone().into()),
-                                    signature,
-                                },
-                                None,
-                            );
+                        DhtOp::RegisterAddLink(signature, create_link) => {
+                            let action = SignedHashed {
+                                hashed: HoloHashed::from_content_sync(create_link.clone()),
+                                signature,
+                            };
 
                             let document_id =
-                                AnyLinkableHashB64::from(action.base_address.clone()).to_string();
+                                AnyLinkableHashB64::from(create_link.base_address.clone())
+                                    .to_string();
 
                             match db
                                 .fluent()
@@ -1420,7 +1423,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .document_id(document_id.clone())
                                 .parent(&parent_path)
                                 .object(&LinkBaseRecord {
-                                    base: action.base_address.clone(),
+                                    base: create_link.base_address.clone(),
                                 })
                                 .execute::<LinkBaseRecord>()
                                 .await
@@ -1436,29 +1439,26 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .insert()
                                 .into("creates")
                                 .document_id(
-                                    ActionHashB64::from(record.action_address().clone())
-                                        .to_string(),
+                                    ActionHashB64::from(action.hashed.hash.clone()).to_string(),
                                 )
                                 .parent(&p)
-                                .object(&record)
-                                .execute::<Record>()
+                                .object(&action)
+                                .execute::<SignedActionHashed>()
                                 .await
                             {
                                 Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
                                 Err(err) => Err(HolochainP2pError::Firestore(err)),
                             }?;
                         }
-                        DhtOp::RegisterRemoveLink(signature, action) => {
-                            let record = Record::new(
-                                SignedHashed {
-                                    hashed: HoloHashed::from_content_sync(action.clone().into()),
-                                    signature,
-                                },
-                                None,
-                            );
+                        DhtOp::RegisterRemoveLink(signature, delete_link) => {
+                            let action = SignedHashed {
+                                hashed: HoloHashed::from_content_sync(delete_link.clone()),
+                                signature,
+                            };
 
                             let document_id =
-                                AnyLinkableHashB64::from(action.base_address.clone()).to_string();
+                                AnyLinkableHashB64::from(delete_link.base_address.clone())
+                                    .to_string();
 
                             match db
                                 .fluent()
@@ -1467,7 +1467,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .document_id(document_id.clone())
                                 .parent(&parent_path)
                                 .object(&LinkBaseRecord {
-                                    base: action.base_address.clone(),
+                                    base: delete_link.base_address.clone(),
                                 })
                                 .execute::<LinkBaseRecord>()
                                 .await
@@ -1485,12 +1485,11 @@ impl HolochainP2pHandler for HolochainP2pActor {
                                 .insert()
                                 .into("deletes")
                                 .document_id(
-                                    ActionHashB64::from(record.action_address().clone())
-                                        .to_string(),
+                                    ActionHashB64::from(action.hashed.hash.clone()).to_string(),
                                 )
                                 .parent(&p)
-                                .object(&record)
-                                .execute::<Record>()
+                                .object(&action)
+                                .execute::<SignedActionHashed>()
                                 .await
                             {
                                 Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
@@ -1627,6 +1626,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
         // .boxed()
         // .into())
         let db = self.db.clone();
+        let cached_db = db.read_through_cache(&self.cache).clone();
         Ok(async move {
             let parent_path = db.parent_path("dnas", DnaHashB64::from(dna_hash).to_string())?;
             // .expect("Could not build parent path");
@@ -1634,7 +1634,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
             match dht_hash.into_primitive() {
                 AnyDhtHashPrimitive::Entry(entry_hash) => {
                     let document_id = EntryHashB64::from(entry_hash).to_string();
-                    let mut entry: Option<Entry> = db
+                    let mut entry: Option<Entry> = cached_db
                         .fluent()
                         .select()
                         .by_id_in("entries")
@@ -1647,50 +1647,53 @@ impl HolochainP2pHandler for HolochainP2pActor {
                     let p = parent_path.at("entries", document_id)?;
                     // .expect("Could not build parent path");
 
-                    let mut stream: BoxStream<Record> = db
+                    let page = db
                         .fluent()
                         .list()
                         .from("creates")
                         .parent(&p)
-                        .obj()
-                        .stream_all()
+                        .page_size(10_000)
+                        .get_page()
                         .await?;
-                    // .expect("Could not create stream");
+                    let creates: Vec<SignedActionHashed> = page
+                        .documents
+                        .into_iter()
+                        .map(|document| {
+                            firestore_document_to_serializable::<SignedActionHashed>(&document)
+                        })
+                        .collect::<Result<Vec<SignedActionHashed>, FirestoreError>>()?;
 
-                    let mut creates: Vec<Record> = vec![];
-                    while let Some(object) = stream.next().await {
-                        creates.push(object);
-                    }
-
-                    let mut stream: BoxStream<Record> = db
+                    let page = db
                         .fluent()
                         .list()
                         .from("updates")
                         .parent(&p)
-                        .obj()
-                        .stream_all()
+                        .page_size(10_000)
+                        .get_page()
                         .await?;
-                    // .expect("Could not create stream");
+                    let updates: Vec<SignedActionHashed> = page
+                        .documents
+                        .into_iter()
+                        .map(|document| {
+                            firestore_document_to_serializable::<SignedActionHashed>(&document)
+                        })
+                        .collect::<Result<Vec<SignedActionHashed>, FirestoreError>>()?;
 
-                    let mut updates: Vec<Record> = vec![];
-                    while let Some(object) = stream.next().await {
-                        updates.push(object);
-                    }
-
-                    let mut stream: BoxStream<Record> = db
+                    let page = db
                         .fluent()
                         .list()
                         .from("deletes")
                         .parent(&p)
-                        .obj()
-                        .stream_all()
+                        .page_size(10_000)
+                        .get_page()
                         .await?;
-                    // .expect("Could not create stream");
-
-                    let mut deletes: Vec<Record> = vec![];
-                    while let Some(object) = stream.next().await {
-                        deletes.push(object);
-                    }
+                    let deletes: Vec<SignedActionHashed> = page
+                        .documents
+                        .into_iter()
+                        .map(|document| {
+                            firestore_document_to_serializable::<SignedActionHashed>(&document)
+                        })
+                        .collect::<Result<Vec<SignedActionHashed>, FirestoreError>>()?;
 
                     let mut entry_data: Option<EntryData> = None;
 
@@ -1711,18 +1714,18 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         creates: creates
                             .iter()
                             .cloned()
-                            .filter_map(|c| WireNewEntryAction::try_from(c.signed_action).ok())
+                            .filter_map(|c| WireNewEntryAction::try_from(c).ok())
                             .map(|c| Judged::valid(c))
                             .collect(),
                         entry: entry_data,
                         deletes: deletes
                             .into_iter()
-                            .filter_map(|d| WireDelete::try_from(d.signed_action).ok())
+                            .filter_map(|d| WireDelete::try_from(d).ok())
                             .map(|d| Judged::valid(d))
                             .collect(),
                         updates: updates
                             .into_iter()
-                            .filter_map(|d| WireUpdateRelationship::try_from(d.signed_action).ok())
+                            .filter_map(|d| WireUpdateRelationship::try_from(d).ok())
                             .map(|d| Judged::valid(d))
                             .collect(),
                     };
@@ -1730,25 +1733,78 @@ impl HolochainP2pHandler for HolochainP2pActor {
                     Ok(vec![WireOps::Entry(wire_entry_ops)])
                 }
                 AnyDhtHashPrimitive::Action(action_hash) => {
-                    let record: Option<Record> = db
+                    let document_id = ActionHashB64::from(action_hash).to_string();
+                    let action: Option<SignedActionHashed> = cached_db
                         .fluent()
                         .select()
-                        .by_id_in("records")
+                        .by_id_in("actions")
                         .parent(&parent_path)
                         .obj()
-                        .one(ActionHashB64::from(action_hash).to_string())
+                        .one(document_id.clone())
                         .await?;
+
+                    let mut entry: Option<Entry> = None;
+
+                    if let Some(action) = action.clone() {
+                        if let Some(entry_hash) = action.action().entry_hash() {
+                            entry = db
+                                .fluent()
+                                .select()
+                                .by_id_in("entries")
+                                .parent(&parent_path)
+                                .obj()
+                                .one(EntryHashB64::from(entry_hash.clone()).to_string())
+                                .await?;
+                        }
+                    }
                     // .expect("Could not get record");
+                    let p = parent_path.at("actions", document_id.clone())?;
+
+                    let page = db
+                        .fluent()
+                        .list()
+                        .from("updates")
+                        .parent(&p)
+                        .page_size(10_000)
+                        .get_page()
+                        .await?;
+                    let updates: Vec<SignedActionHashed> = page
+                        .documents
+                        .into_iter()
+                        .map(|document| {
+                            firestore_document_to_serializable::<SignedActionHashed>(&document)
+                        })
+                        .collect::<Result<Vec<SignedActionHashed>, FirestoreError>>()?;
+
+                    let page = db
+                        .fluent()
+                        .list()
+                        .from("deletes")
+                        .parent(&p)
+                        .page_size(10_000)
+                        .get_page()
+                        .await?;
+                    let deletes: Vec<SignedActionHashed> = page
+                        .documents
+                        .into_iter()
+                        .map(|document| {
+                            firestore_document_to_serializable::<SignedActionHashed>(&document)
+                        })
+                        .collect::<Result<Vec<SignedActionHashed>, FirestoreError>>()?;
 
                     let wire_record_ops = WireRecordOps {
-                        action: record
-                            .clone()
-                            .map(|r| Judged::valid(r.signed_action.into())),
-                        entry: record
-                            .filter(|r| r.entry().as_option().is_some())
-                            .map(|r| r.entry().as_option().unwrap().clone()),
-                        deletes: vec![],
-                        updates: vec![],
+                        action: action.clone().map(|a| Judged::valid(a.into())),
+                        entry,
+                        deletes: deletes
+                            .into_iter()
+                            .filter_map(|d| WireDelete::try_from(d).ok())
+                            .map(|d| Judged::valid(d))
+                            .collect(),
+                        updates: updates
+                            .into_iter()
+                            .filter_map(|d| WireUpdateRelationship::try_from(d).ok())
+                            .map(|d| Judged::valid(d))
+                            .collect(),
                     };
 
                     Ok(vec![WireOps::Record(wire_record_ops)])
@@ -1835,50 +1891,50 @@ impl HolochainP2pHandler for HolochainP2pActor {
             let p = parent_path.at("links", document_id)?;
             // .expect("Could not build parent path");
 
-            let mut stream: BoxStream<Record> = db
+            let page = db
                 .fluent()
                 .list()
                 .from("creates")
                 .parent(&p)
-                .obj()
-                .stream_all()
+                .page_size(10_000)
+                .get_page()
                 .await?;
-            // .expect("Could not create stream");
+            let creates: Vec<SignedActionHashed> = page
+                .documents
+                .into_iter()
+                .map(|document| firestore_document_to_serializable::<SignedActionHashed>(&document))
+                .collect::<Result<Vec<SignedActionHashed>, FirestoreError>>()?;
 
-            let mut creates: Vec<Record> = vec![];
-            while let Some(object) = stream.next().await {
-                creates.push(object);
-            }
             let all_create_link_hashes: Vec<ActionHash> = creates
                 .iter()
-                .filter(|c| match c.action() {
+                .filter(|c| match c.hashed.content.clone() {
                     Action::CreateLink(cl) => {
                         link_key.type_query.contains(&cl.zome_index, &cl.link_type)
                     }
                     _ => false,
                 })
-                .map(|r| r.action_address().clone())
+                .map(|r| r.hashed.hash.clone())
                 .collect();
 
-            let mut stream: BoxStream<Record> = db
+            let page = db
                 .fluent()
                 .list()
                 .from("deletes")
                 .parent(&p)
-                .obj()
-                .stream_all()
+                .page_size(10_000)
+                .get_page()
                 .await?;
+            let deletes: Vec<SignedActionHashed> = page
+                .documents
+                .into_iter()
+                .map(|document| firestore_document_to_serializable::<SignedActionHashed>(&document))
+                .collect::<Result<Vec<SignedActionHashed>, FirestoreError>>()?;
             // .expect("Could not create stream");
-
-            let mut deletes: Vec<Record> = vec![];
-            while let Some(object) = stream.next().await {
-                deletes.push(object);
-            }
 
             let wire_links_ops = WireLinkOps {
                 creates: creates
                     .into_iter()
-                    .filter_map(|c| match c.action() {
+                    .filter_map(|c| match c.hashed.content.clone() {
                         Action::CreateLink(cl) => {
                             if !link_key.type_query.contains(&cl.zome_index, &cl.link_type) {
                                 return None;
@@ -1894,13 +1950,13 @@ impl HolochainP2pHandler for HolochainP2pActor {
                     .collect(),
                 deletes: deletes
                     .into_iter()
-                    .filter(|c| match c.action() {
+                    .filter(|c| match c.hashed.content.clone() {
                         Action::DeleteLink(dl) => {
                             all_create_link_hashes.contains(&dl.link_add_address)
                         }
                         _ => false,
                     })
-                    .filter_map(|c| match c.action() {
+                    .filter_map(|c| match c.hashed.content.clone() {
                         Action::DeleteLink(cl) => Some(WireDeleteLink::condense(
                             cl.clone(),
                             c.signature().clone(),
