@@ -1408,7 +1408,9 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         }
                         DhtOp::RegisterAddLink(signature, create_link) => {
                             let action = SignedHashed {
-                                hashed: HoloHashed::from_content_sync(create_link.clone()),
+                                hashed: HoloHashed::from_content_sync(Action::CreateLink(
+                                    create_link.clone(),
+                                )),
                                 signature,
                             };
 
@@ -1452,7 +1454,9 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         }
                         DhtOp::RegisterRemoveLink(signature, delete_link) => {
                             let action = SignedHashed {
-                                hashed: HoloHashed::from_content_sync(delete_link.clone()),
+                                hashed: HoloHashed::from_content_sync(Action::DeleteLink(
+                                    delete_link.clone(),
+                                )),
                                 signature,
                             };
 
