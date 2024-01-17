@@ -23,6 +23,7 @@ use holochain_trace::tracing::warn;
 use holochain_zome_types::zome::FunctionName;
 use kitsune_p2p::actor::KitsuneP2pSender;
 use kitsune_p2p::agent_store::AgentInfoSigned;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::future::Future;
 
@@ -363,7 +364,7 @@ fn service_account_key() -> String {
     std::env!("SERVICE_ACCOUNT_KEY").into()
 }
 
-pub static DB: tokio::sync::RwLock<Option<FirestoreDb>> = tokio::sync::RwLock::const_new(None);
+static DB: tokio::sync::RwLock<Option<FirestoreDb>> = tokio::sync::RwLock::const_new(None);
 
 async fn db() -> Result<FirestoreDb, HolochainP2pError> {
     let mut lock = DB.write().await;
@@ -388,14 +389,22 @@ async fn db() -> Result<FirestoreDb, HolochainP2pError> {
     Ok(db)
 }
 
-pub static CACHED_DB: tokio::sync::RwLock<Option<FirestoreDb>> =
+static CACHED_DBS: tokio::sync::RwLock<Option<HashMap<DnaHash, FirestoreDb>>> =
     tokio::sync::RwLock::const_new(None);
 
-async fn cached_db() -> Result<FirestoreDb, HolochainP2pError> {
-    let mut lock = CACHED_DB.write().await;
+async fn cached_db(dna_hash: DnaHash) -> Result<FirestoreDb, HolochainP2pError> {
+    let mut lock = CACHED_DBS.write().await;
 
-    if let Some(info) = lock.to_owned() {
-        return Ok(info.clone());
+    // let mut map: HashMap<DnaHash, FirestoreDb> = lock.unwrap_or_default();
+
+    if let None = lock.as_ref() {
+        *lock = Some(HashMap::new());
+    }
+
+    if let Some(map) = lock.as_ref() {
+        if let Some(cache) = map.get(&dna_hash) {
+            return Ok(cache.clone());
+        }
     }
     let d = db().await?;
 
@@ -403,14 +412,25 @@ async fn cached_db() -> Result<FirestoreDb, HolochainP2pError> {
         "example-persistent-cache".into(),
         &d,
         FirestorePersistentCacheBackend::new(
-            FirestoreCacheConfiguration::new().add_collection_config(
-                &d,
-                FirestoreCacheCollectionConfiguration::new(
-                    "dnas",
-                    FirestoreListenerTarget::new(1000),
-                    FirestoreCacheCollectionLoadMode::PreloadAllIfEmpty,
+            FirestoreCacheConfiguration::new()
+                .add_collection_config(
+                    &d,
+                    FirestoreCacheCollectionConfiguration::new(
+                        "entries",
+                        FirestoreListenerTarget::new(1000),
+                        FirestoreCacheCollectionLoadMode::PreloadAllIfEmpty,
+                    )
+                    .with_parent(format!("dnas/{dna_hash}")),
+                )
+                .add_collection_config(
+                    &d,
+                    FirestoreCacheCollectionConfiguration::new(
+                        "actions",
+                        FirestoreListenerTarget::new(1000),
+                        FirestoreCacheCollectionLoadMode::PreloadAllIfEmpty,
+                    )
+                    .with_parent(format!("dnas/{dna_hash}")),
                 ),
-            ),
         )?,
         FirestoreTempFilesListenStateStorage::new(),
     )
@@ -418,12 +438,16 @@ async fn cached_db() -> Result<FirestoreDb, HolochainP2pError> {
 
     cache.load().await?;
 
-    let cached_db = d.read_through_cache(&cache).clone();
-    *lock = Some(cached_db.clone());
+    let db = d.read_through_cache(&cache);
 
-    Ok(cached_db)
+    // let map = &mut lock;
+    lock.as_mut().unwrap().insert(dna_hash, db.clone());
+    // *lock = Some(map);
+
+    Ok(db)
 }
 
+/// Init DNA
 pub async fn init_dna_if_necessary(dna_hash: DnaHash) -> Result<(), HolochainP2pError> {
     let db = db().await?;
 
@@ -439,8 +463,7 @@ pub async fn init_dna_if_necessary(dna_hash: DnaHash) -> Result<(), HolochainP2p
         Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
         Err(err) => Err(HolochainP2pError::Firestore(err)),
     }?;
-
-    tracing::log::error!("Joined worked ok");
+    tracing::log::info!("Initialized DNA");
     Ok(())
 }
 
@@ -1651,7 +1674,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
         // .into())
         Ok(async move {
             let db = db().await?;
-            let cached_db = cached_db().await?;
+            let cached_db = cached_db(dna_hash.clone()).await?;
             let parent_path = db.parent_path("dnas", DnaHashB64::from(dna_hash).to_string())?;
             // .expect("Could not build parent path");
 
