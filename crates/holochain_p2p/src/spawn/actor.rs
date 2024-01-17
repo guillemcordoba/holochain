@@ -364,6 +364,8 @@ fn service_account_key() -> String {
     std::env!("SERVICE_ACCOUNT_KEY").into()
 }
 
+const PROJECT_ID: &'static str = "rostanga-ce319";
+
 static DB: tokio::sync::RwLock<Option<FirestoreDb>> = tokio::sync::RwLock::const_new(None);
 
 async fn db() -> Result<FirestoreDb, HolochainP2pError> {
@@ -374,7 +376,7 @@ async fn db() -> Result<FirestoreDb, HolochainP2pError> {
     }
     let db = FirestoreDb::with_options_token_source(
         FirestoreDbOptions {
-            google_project_id: "rostanga-ce319".into(),
+            google_project_id: PROJECT_ID.into(),
             database_id: String::from("(default)"),
             max_retries: 10,
             firebase_api_url: None,
@@ -420,7 +422,9 @@ async fn cached_db(dna_hash: DnaHash) -> Result<FirestoreDb, HolochainP2pError> 
                         FirestoreListenerTarget::new(1000),
                         FirestoreCacheCollectionLoadMode::PreloadAllIfEmpty,
                     )
-                    .with_parent(format!("(default)/documents/dnas/{dna_hash}")),
+                    .with_parent(format!(
+                        "projects/{PROJECT_ID}/databases/(default)/documents/dnas/{dna_hash}"
+                    )),
                 )
                 .add_collection_config(
                     &d,
@@ -429,7 +433,9 @@ async fn cached_db(dna_hash: DnaHash) -> Result<FirestoreDb, HolochainP2pError> 
                         FirestoreListenerTarget::new(1000),
                         FirestoreCacheCollectionLoadMode::PreloadAllIfEmpty,
                     )
-                    .with_parent(format!("(default)/documents/dnas/{dna_hash}")),
+                    .with_parent(format!(
+                        "projects/{PROJECT_ID}/databases/(default)/documents/dnas/{dna_hash}"
+                    )),
                 ),
         )?,
         FirestoreTempFilesListenStateStorage::new(),
