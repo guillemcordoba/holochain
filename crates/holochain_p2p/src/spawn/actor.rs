@@ -369,11 +369,12 @@ const PROJECT_ID: &'static str = "rostanga-ce319";
 static DB: tokio::sync::RwLock<Option<FirestoreDb>> = tokio::sync::RwLock::const_new(None);
 
 async fn db() -> Result<FirestoreDb, HolochainP2pError> {
-    let mut lock = DB.write().await;
+    let lock = DB.read().await;
 
     if let Some(info) = lock.to_owned() {
         return Ok(info.clone());
     }
+    let mut lock = DB.write().await;
     let db = FirestoreDb::with_options_token_source(
         FirestoreDbOptions {
             google_project_id: PROJECT_ID.into(),
@@ -395,18 +396,19 @@ static CACHED_DBS: tokio::sync::RwLock<Option<HashMap<DnaHash, FirestoreDb>>> =
     tokio::sync::RwLock::const_new(None);
 
 async fn cached_db(dna_hash: DnaHash) -> Result<FirestoreDb, HolochainP2pError> {
-    let mut lock = CACHED_DBS.write().await;
+    let lock = CACHED_DBS.read().await;
 
     // let mut map: HashMap<DnaHash, FirestoreDb> = lock.unwrap_or_default();
-
-    if let None = lock.as_ref() {
-        *lock = Some(HashMap::new());
-    }
 
     if let Some(map) = lock.as_ref() {
         if let Some(cache) = map.get(&dna_hash) {
             return Ok(cache.clone());
         }
+    }
+    let mut lock = CACHED_DBS.write().await;
+
+    if let None = lock.as_ref() {
+        *lock = Some(HashMap::new());
     }
     let d = db().await?;
 
