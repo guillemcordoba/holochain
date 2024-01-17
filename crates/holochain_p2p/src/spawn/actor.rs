@@ -331,11 +331,11 @@ impl WrapEvtSender {
 }
 
 pub(crate) struct HolochainP2pActor {
-    db: FirestoreDb,
-    cache: firestore::FirestoreCache<
-        FirestorePersistentCacheBackend,
-        FirestoreTempFilesListenStateStorage,
-    >,
+    // db: FirestoreDb,
+    // cache: firestore::FirestoreCache<
+    //     FirestorePersistentCacheBackend,
+    //     FirestoreTempFilesListenStateStorage,
+    // >,
     // config: kitsune_p2p_types::config::KitsuneP2pConfig,
     // evt_sender: WrapEvtSender,
     // kitsune_p2p: ghost_actor::GhostSender<kitsune_p2p::actor::KitsuneP2p>,
@@ -363,7 +363,14 @@ fn service_account_key() -> String {
     std::env!("SERVICE_ACCOUNT_KEY").into()
 }
 
-async fn db() -> FirestoreDb {
+pub static DB: tokio::sync::RwLock<Option<FirestoreDb>> = tokio::sync::RwLock::const_new(None);
+
+async fn db() -> Result<FirestoreDb, HolochainP2pError> {
+    let mut lock = DB.write().await;
+
+    if let Some(info) = lock.to_owned() {
+        return Ok(info.clone());
+    }
     let db = FirestoreDb::with_options_token_source(
         FirestoreDbOptions {
             google_project_id: "rostanga-ce319".into(),
@@ -374,10 +381,47 @@ async fn db() -> FirestoreDb {
         gcloud_sdk::GCP_DEFAULT_SCOPES.clone(),
         TokenSourceType::Json(service_account_key()),
     )
-    .await
-    .expect("Can't connect to firestore");
+    .await?;
 
-    db
+    *lock = Some(db.clone());
+
+    Ok(db)
+}
+
+pub static CACHED_DB: tokio::sync::RwLock<Option<FirestoreDb>> =
+    tokio::sync::RwLock::const_new(None);
+
+async fn cached_db() -> Result<FirestoreDb, HolochainP2pError> {
+    let mut lock = CACHED_DB.write().await;
+
+    if let Some(info) = lock.to_owned() {
+        return Ok(info.clone());
+    }
+    let d = db().await?;
+
+    let mut cache = FirestoreCache::new(
+        "example-persistent-cache".into(),
+        &d,
+        FirestorePersistentCacheBackend::new(
+            FirestoreCacheConfiguration::new().add_collection_config(
+                &d,
+                FirestoreCacheCollectionConfiguration::new(
+                    "dnas",
+                    FirestoreListenerTarget::new(1000),
+                    FirestoreCacheCollectionLoadMode::PreloadAllIfEmpty,
+                ),
+            ),
+        )?,
+        FirestoreTempFilesListenStateStorage::new(),
+    )
+    .await?;
+
+    cache.load().await?;
+
+    let cached_db = d.read_through_cache(&cache).clone();
+    *lock = Some(cached_db.clone());
+
+    Ok(cached_db)
 }
 
 impl HolochainP2pActor {
@@ -389,35 +433,11 @@ impl HolochainP2pActor {
         evt_sender: futures::channel::mpsc::Sender<HolochainP2pEvent>,
         host: kitsune_p2p::HostApi,
     ) -> HolochainP2pResult<Self> {
-        use firestore::*;
         // let (kitsune_p2p, kitsune_p2p_events) =
         //     kitsune_p2p::spawn_kitsune_p2p(config.clone(), tls_config, host.clone()).await?;
 
         // channel_factory.attach_receiver(kitsune_p2p_events).await?;
-
-        let db = db().await;
-        let mut cache = FirestoreCache::new(
-            "example-persistent-cache".into(),
-            &db,
-            FirestorePersistentCacheBackend::new(
-                FirestoreCacheConfiguration::new().add_collection_config(
-                    &db,
-                    FirestoreCacheCollectionConfiguration::new(
-                        "dnas",
-                        FirestoreListenerTarget::new(1000),
-                        FirestoreCacheCollectionLoadMode::PreloadAllIfEmpty,
-                    ),
-                ),
-            )?,
-            FirestoreTempFilesListenStateStorage::new(),
-        )
-        .await?;
-
-        cache.load().await?;
-
         Ok(Self {
-            db,
-            cache, // config,
                    // evt_sender: WrapEvtSender(evt_sender),
                    // kitsune_p2p,
                    // host,
@@ -1080,9 +1100,9 @@ impl HolochainP2pHandler for HolochainP2pActor {
         maybe_agent_info: Option<AgentInfoSigned>,
         initial_arc: Option<crate::dht_arc::DhtArc>,
     ) -> HolochainP2pHandlerResult<()> {
-        let db = self.db.clone();
-
         Ok(async move {
+            let db = db().await?;
+
             match db
                 .fluent()
                 .insert()
@@ -1206,8 +1226,8 @@ impl HolochainP2pHandler for HolochainP2pActor {
         timeout_ms: Option<u64>,
         reflect_ops: Option<Vec<DhtOp>>,
     ) -> HolochainP2pHandlerResult<()> {
-        let db = self.db.clone();
         Ok(async move {
+            let db = db().await?;
             if let Some(ops) = reflect_ops {
                 let parent_path = db.parent_path("dnas", DnaHashB64::from(dna_hash).to_string())?;
                 for op in ops {
@@ -1629,9 +1649,9 @@ impl HolochainP2pHandler for HolochainP2pActor {
         // }
         // .boxed()
         // .into())
-        let db = self.db.clone();
-        let cached_db = db.read_through_cache(&self.cache).clone();
         Ok(async move {
+            let db = db().await?;
+            let cached_db = cached_db().await?;
             let parent_path = db.parent_path("dnas", DnaHashB64::from(dna_hash).to_string())?;
             // .expect("Could not build parent path");
 
@@ -1656,7 +1676,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         .list()
                         .from("creates")
                         .parent(&p)
-                        .page_size(10_000)
+                        .page_size(100_000)
                         .get_page()
                         .await?;
                     let creates: Vec<SignedActionHashed> = page
@@ -1672,7 +1692,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         .list()
                         .from("updates")
                         .parent(&p)
-                        .page_size(10_000)
+                        .page_size(100_000)
                         .get_page()
                         .await?;
                     let updates: Vec<SignedActionHashed> = page
@@ -1688,7 +1708,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         .list()
                         .from("deletes")
                         .parent(&p)
-                        .page_size(10_000)
+                        .page_size(100_000)
                         .get_page()
                         .await?;
                     let deletes: Vec<SignedActionHashed> = page
@@ -1769,7 +1789,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         .list()
                         .from("updates")
                         .parent(&p)
-                        .page_size(10_000)
+                        .page_size(100_000)
                         .get_page()
                         .await?;
                     let updates: Vec<SignedActionHashed> = page
@@ -1785,7 +1805,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                         .list()
                         .from("deletes")
                         .parent(&p)
-                        .page_size(10_000)
+                        .page_size(100_000)
                         .get_page()
                         .await?;
                     let deletes: Vec<SignedActionHashed> = page
@@ -1885,9 +1905,9 @@ impl HolochainP2pHandler for HolochainP2pActor {
         // }
         // .boxed()
         // .into())
-        let db = self.db.clone();
 
         Ok(async move {
+            let db = db().await?;
             let parent_path = db.parent_path("dnas", DnaHashB64::from(dna_hash).to_string())?;
             // .expect("Could not build parent path");
             let document_id = AnyLinkableHashB64::from(link_key.base).to_string();
@@ -1900,7 +1920,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                 .list()
                 .from("creates")
                 .parent(&p)
-                .page_size(10_000)
+                .page_size(100_000)
                 .get_page()
                 .await?;
             let creates: Vec<SignedActionHashed> = page
@@ -1925,7 +1945,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
                 .list()
                 .from("deletes")
                 .parent(&p)
-                .page_size(10_000)
+                .page_size(100_000)
                 .get_page()
                 .await?;
             let deletes: Vec<SignedActionHashed> = page

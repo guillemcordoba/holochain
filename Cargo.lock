@@ -2962,7 +2962,7 @@ dependencies = [
  "futures",
  "holochain_serialized_bytes",
  "holochain_util",
- "holochain_wasmer_common 0.0.91",
+ "holochain_wasmer_common",
  "kitsune_p2p_dht_arc",
  "must_future",
  "proptest",
@@ -3674,19 +3674,6 @@ dependencies = [
 
 [[package]]
 name = "holochain_wasmer_common"
-version = "0.0.90"
-source = "git+https://github.com/holochain/holochain-wasmer?branch=refactor/reinstate-module-cache#3aa836d3e40551b3f695a232dbf0c4a84fdec074"
-dependencies = [
- "holochain_serialized_bytes",
- "serde",
- "serde_bytes",
- "test-fuzz",
- "thiserror",
- "wasmer",
-]
-
-[[package]]
-name = "holochain_wasmer_common"
 version = "0.0.91"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91334617b53995b436796417abf4cfca516c33404842e60025c26321329c8734"
@@ -3706,7 +3693,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30a4e3dcf97f42847f0ea8a4ed33d6ccf718764ed00f5a73390e9b4e5319b719"
 dependencies = [
  "holochain_serialized_bytes",
- "holochain_wasmer_common 0.0.91",
+ "holochain_wasmer_common",
  "parking_lot 0.12.1",
  "paste",
  "serde",
@@ -3716,13 +3703,14 @@ dependencies = [
 [[package]]
 name = "holochain_wasmer_host"
 version = "0.0.91"
-source = "git+https://github.com/holochain/holochain-wasmer?branch=refactor/reinstate-module-cache#3aa836d3e40551b3f695a232dbf0c4a84fdec074"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52e7c5fd84c6b3015d015ebcbc5ec90d95e97390251657dd2700096743626f59"
 dependencies = [
  "bimap",
  "bytes",
  "hex",
  "holochain_serialized_bytes",
- "holochain_wasmer_common 0.0.90",
+ "holochain_wasmer_common",
  "parking_lot 0.12.1",
  "rand 0.8.5",
  "serde",
@@ -3772,7 +3760,7 @@ dependencies = [
  "holochain_nonce",
  "holochain_secure_primitive",
  "holochain_serialized_bytes",
- "holochain_wasmer_common 0.0.91",
+ "holochain_wasmer_common",
  "holochain_zome_types",
  "kitsune_p2p_bin_data",
  "kitsune_p2p_block",
@@ -10084,3 +10072,8 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
+
+[[patch.unused]]
+name = "holochain_wasmer_host"
+version = "0.0.90"
+source = "git+https://github.com/holochain/holochain-wasmer?branch=refactor/reinstate-module-cache#e22e5620b0b230d9328279c49ef057bc57fa4202"
