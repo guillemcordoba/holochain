@@ -1899,7 +1899,7 @@ mod app_status_impls {
             // status, and start their workflow loops
             self.add_and_initialize_cells(new_cells);
 
-            for (cell, _) in new_cells {
+            for (cell, _) in &new_cells {
                 init_dna_if_necessary(cell.id().dna_hash().clone()).await?;
             }
 
