@@ -1895,8 +1895,11 @@ mod app_status_impls {
                 .map(Result::unwrap_err)
                 .collect();
 
-            for (cell, _) in &new_cells {
-                init_dna_if_necessary(cell.id().dna_hash().clone()).await?;
+            for dna_hash in new_cells
+                .iter()
+                .map(|(cell, _)| cell.id().dna_hash().clone())
+            {
+                init_dna_if_necessary(dna_hash).await?;
             }
             // Add the newly created cells to the Conductor with the PendingJoin
             // status, and start their workflow loops
