@@ -2,7 +2,7 @@ use crate::actor::*;
 use crate::event::*;
 
 mod actor;
-use actor::*;
+pub use actor::*;
 
 /// Spawn a new HolochainP2p actor.
 /// Conductor will call this on initialization.

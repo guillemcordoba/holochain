@@ -1760,6 +1760,7 @@ mod clone_cell_impls {
 /// Methods related to management of app and cell status
 mod app_status_impls {
     use super::*;
+    use holochain_p2p::init_dna_if_necessary;
     use kitsune_p2p_bootstrap_client::prelude::BootstrapClientError;
 
     impl Conductor {
