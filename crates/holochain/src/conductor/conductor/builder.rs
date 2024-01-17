@@ -61,8 +61,6 @@ impl ConductorBuilder {
     pub async fn build(self) -> ConductorResult<ConductorHandle> {
         tracing::info!(?self.config);
 
-        tracing::log::error!("BUIILD 1");
-
         let keystore = if let Some(keystore) = self.keystore {
             keystore
         } else {
@@ -126,7 +124,6 @@ impl ConductorBuilder {
                 }
             }
         };
-        tracing::log::error!("BUIILD 2");
 
         let Self {
             ribosome_store,
@@ -141,19 +138,16 @@ impl ConductorBuilder {
         let spaces = Spaces::new(config.clone())?;
         let tag = spaces.get_state().await?.tag().clone();
 
-        tracing::log::error!("BUIILD 3");
         let tag_ed: Arc<str> = format!("{}_ed", tag.0).into_boxed_str().into();
         let _ = keystore
             .lair_client()
             .new_seed(tag_ed.clone(), None, false)
             .await;
 
-        tracing::log::error!("BUIILD 4");
         let network_config = config.network.clone();
         let (cert_digest, cert, cert_priv_key) = keystore
             .get_or_create_tls_cert_by_tag(tag.0.clone())
             .await?;
-        tracing::log::error!("BUIILD 5");
         let tls_config =
             holochain_p2p::kitsune_p2p::dependencies::kitsune_p2p_types::tls::TlsConfig {
                 cert,
@@ -179,7 +173,6 @@ impl ConductorBuilder {
                     return Err(err.into());
                 }
             };
-        tracing::log::error!("BUIILD 6");
 
         let (post_commit_sender, post_commit_receiver) =
             tokio::sync::mpsc::channel(POST_COMMIT_CHANNEL_BOUND);
@@ -200,7 +193,6 @@ impl ConductorBuilder {
 
         #[cfg(any(test, feature = "test_utils"))]
         let conductor = Self::update_fake_state(self.state, conductor).await?;
-        tracing::log::error!("BUIILD 7");
 
         // Create handle
         let handle: ConductorHandle = Arc::new(conductor);
@@ -216,7 +208,6 @@ impl ConductorBuilder {
                 }
             });
         }
-        tracing::log::error!("BUIILD 8");
 
         let r = Self::finish(
             handle,
@@ -227,7 +218,6 @@ impl ConductorBuilder {
             self.no_print_setup,
         )
         .await;
-        tracing::log::error!("BUIILD 9");
         r
     }
 
