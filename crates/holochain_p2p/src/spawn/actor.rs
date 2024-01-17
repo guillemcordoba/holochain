@@ -424,6 +424,26 @@ async fn cached_db() -> Result<FirestoreDb, HolochainP2pError> {
     Ok(cached_db)
 }
 
+pub async fn init_dna_if_necessary(dna_hash: DnaHash) -> Result<(), HolochainP2pError> {
+    let db = db().await?;
+
+    match db
+        .fluent()
+        .insert()
+        .into("dnas")
+        .document_id(DnaHashB64::from(dna_hash.clone()).to_string())
+        .object(&DnaRecord { dna_hash })
+        .execute::<DnaRecord>()
+        .await
+    {
+        Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
+        Err(err) => Err(HolochainP2pError::Firestore(err)),
+    }?;
+
+    tracing::log::error!("Joined worked ok");
+    Ok(())
+}
+
 impl HolochainP2pActor {
     /// constructor
     pub async fn new(
@@ -1100,27 +1120,7 @@ impl HolochainP2pHandler for HolochainP2pActor {
         maybe_agent_info: Option<AgentInfoSigned>,
         initial_arc: Option<crate::dht_arc::DhtArc>,
     ) -> HolochainP2pHandlerResult<()> {
-        Ok(async move {
-            let db = db().await?;
-
-            match db
-                .fluent()
-                .insert()
-                .into("dnas")
-                .document_id(DnaHashB64::from(dna_hash.clone()).to_string())
-                .object(&DnaRecord { dna_hash })
-                .execute::<DnaRecord>()
-                .await
-            {
-                Ok(_) | Err(FirestoreError::DataConflictError(_)) => Ok(()),
-                Err(err) => Err(HolochainP2pError::Firestore(err)),
-            }?;
-
-            tracing::log::error!("Joined worked ok");
-            Ok(())
-        }
-        .boxed()
-        .into())
+        Ok(async move { Ok(()) }.boxed().into())
     }
 
     #[tracing::instrument(skip(self), level = "trace")]
