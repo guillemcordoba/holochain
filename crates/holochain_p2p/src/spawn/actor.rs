@@ -409,7 +409,7 @@ async fn cached_db(dna_hash: DnaHash) -> Result<FirestoreDb, HolochainP2pError> 
     let d = db().await?;
 
     let mut cache = FirestoreCache::new(
-        "example-persistent-cache".into(),
+        format!("dna_{dna_hash}").into(),
         &d,
         FirestorePersistentCacheBackend::new(
             FirestoreCacheConfiguration::new()
