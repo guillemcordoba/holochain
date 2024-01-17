@@ -420,7 +420,7 @@ async fn cached_db(dna_hash: DnaHash) -> Result<FirestoreDb, HolochainP2pError> 
                         FirestoreListenerTarget::new(1000),
                         FirestoreCacheCollectionLoadMode::PreloadAllIfEmpty,
                     )
-                    .with_parent(format!("dnas/{dna_hash}")),
+                    .with_parent(format!("(default)/documents/dnas/{dna_hash}")),
                 )
                 .add_collection_config(
                     &d,
@@ -429,7 +429,7 @@ async fn cached_db(dna_hash: DnaHash) -> Result<FirestoreDb, HolochainP2pError> 
                         FirestoreListenerTarget::new(1000),
                         FirestoreCacheCollectionLoadMode::PreloadAllIfEmpty,
                     )
-                    .with_parent(format!("dnas/{dna_hash}")),
+                    .with_parent(format!("(default)/documents/dnas/{dna_hash}")),
                 ),
         )?,
         FirestoreTempFilesListenStateStorage::new(),
