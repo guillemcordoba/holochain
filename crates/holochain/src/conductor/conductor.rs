@@ -1881,7 +1881,7 @@ mod app_status_impls {
             let (new_cells, errors): (Vec<_>, Vec<_>) =
                 results.into_iter().partition(Result::is_ok);
 
-            let new_cells = new_cells
+            let new_cells: Vec<(Cell, InitialQueueTriggers)> = new_cells
                 .into_iter()
                 // We can unwrap the successes because of the partition
                 .map(Result::unwrap)
