@@ -397,6 +397,7 @@ static CACHED_DBS: tokio::sync::RwLock<Option<HashMap<DnaHash, FirestoreDb>>> =
     tokio::sync::RwLock::const_new(None);
 
 async fn cached_db(dna_hash: DnaHash) -> Result<FirestoreDb, HolochainP2pError> {
+    return db().await;
     let lock = CACHED_DBS.read().await;
 
     // let mut map: HashMap<DnaHash, FirestoreDb> = lock.unwrap_or_default();
