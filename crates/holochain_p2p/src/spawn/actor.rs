@@ -374,6 +374,7 @@ async fn db() -> Result<FirestoreDb, HolochainP2pError> {
     if let Some(info) = lock.to_owned() {
         return Ok(info.clone());
     }
+    std::mem::drop(lock);
     let mut lock = DB.write().await;
     let db = FirestoreDb::with_options_token_source(
         FirestoreDbOptions {
@@ -405,6 +406,7 @@ async fn cached_db(dna_hash: DnaHash) -> Result<FirestoreDb, HolochainP2pError> 
             return Ok(cache.clone());
         }
     }
+    std::mem::drop(lock);
     let mut lock = CACHED_DBS.write().await;
 
     if let None = lock.as_ref() {
