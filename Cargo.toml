@@ -110,3 +110,9 @@ lto = true
 # lair_keystore_api = { path = "../lair/crates/lair_keystore_api" }
 # lair_keystore = { path = "../lair/crates/lair_keystore" }
 # r2d2_sqlite = { path = "../r2d2-sqlite" }
+kitsune2 = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+kitsune2_api = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+kitsune2_core = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+kitsune2_dht = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+kitsune2_gossip = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
