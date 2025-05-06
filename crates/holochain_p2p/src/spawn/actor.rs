@@ -1513,11 +1513,8 @@ impl actor::HcP2p for HolochainP2pActor {
                 ));
             }
 
-            println!("aaa {:?}", agents);
-
             let start = std::time::Instant::now();
 
-            tracing::error!("aaa {:?}", agents);
             let (out, _) =
                 futures::future::select_ok(agents.into_iter().take(5).map(|(to_agent, to_url)| {
                     Box::pin(async {
