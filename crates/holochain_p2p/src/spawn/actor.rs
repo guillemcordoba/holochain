@@ -1380,6 +1380,12 @@ impl actor::HcP2p for HolochainP2pActor {
             let loc = dht_hash.get_loc();
 
             let agents = self.get_peers_for_location(&space, loc).await?;
+            if agents.len() == 0 {
+                return Err(HolochainP2pError::NoPeersForLocation(
+                    String::from("get_links"),
+                    loc,
+                ));
+            }
 
             let start = std::time::Instant::now();
 
@@ -1436,6 +1442,12 @@ impl actor::HcP2p for HolochainP2pActor {
             let space = self.kitsune.space(space_id.clone()).await?;
             let loc = dht_hash.get_loc();
             let agents = self.get_peers_for_location(&space, loc).await?;
+            if agents.len() == 0 {
+                return Err(HolochainP2pError::NoPeersForLocation(
+                    String::from("get_links"),
+                    loc,
+                ));
+            }
 
             let start = std::time::Instant::now();
 
@@ -1493,6 +1505,13 @@ impl actor::HcP2p for HolochainP2pActor {
             let loc = link_key.base.get_loc();
 
             let agents = self.get_peers_for_location(&space, loc).await?;
+
+            if agents.len() == 0 {
+                return Err(HolochainP2pError::NoPeersForLocation(
+                    String::from("get_links"),
+                    loc,
+                ));
+            }
 
             println!("aaa {:?}", agents);
 
@@ -1552,6 +1571,12 @@ impl actor::HcP2p for HolochainP2pActor {
             let loc = query.base.get_loc();
 
             let agents = self.get_peers_for_location(&space, loc).await?;
+            if agents.len() == 0 {
+                return Err(HolochainP2pError::NoPeersForLocation(
+                    String::from("get_links"),
+                    loc,
+                ));
+            }
 
             let start = std::time::Instant::now();
 
@@ -1605,6 +1630,12 @@ impl actor::HcP2p for HolochainP2pActor {
             let loc = agent.get_loc();
 
             let agents = self.get_peers_for_location(&space, loc).await?;
+            if agents.len() == 0 {
+                return Err(HolochainP2pError::NoPeersForLocation(
+                    String::from("get_links"),
+                    loc,
+                ));
+            }
 
             let start = std::time::Instant::now();
 
@@ -1664,6 +1695,12 @@ impl actor::HcP2p for HolochainP2pActor {
             let loc = author.get_loc();
 
             let agents = self.get_peers_for_location(&space, loc).await?;
+            if agents.len() == 0 {
+                return Err(HolochainP2pError::NoPeersForLocation(
+                    String::from("get_links"),
+                    loc,
+                ));
+            }
 
             let start = std::time::Instant::now();
 
