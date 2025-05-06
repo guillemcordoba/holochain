@@ -1468,6 +1468,8 @@ impl actor::HcP2p for HolochainP2pActor {
 
             println!("aaa {:?}", agents);
 
+            tracing::error!("aaa {:?}", agents);
+
             let (to_agent, to_url) = self.get_peer_for_loc("get_links", &space, loc).await?;
 
             let r_options: event::GetLinksOptions = (&options).into();
