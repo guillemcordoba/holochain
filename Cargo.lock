@@ -2619,7 +2619,7 @@ dependencies = [
 
 [[package]]
 name = "holochain"
-version = "0.5.2-rc.1"
+version = "0.5.1"
 dependencies = [
  "anyhow",
  "assert2",
