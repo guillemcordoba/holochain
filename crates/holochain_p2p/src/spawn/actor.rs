@@ -1487,6 +1487,7 @@ impl actor::HcP2p for HolochainP2pActor {
         link_key: WireLinkKey,
         options: actor::GetLinksOptions,
     ) -> BoxFut<'_, HolochainP2pResult<Vec<WireLinkOps>>> {
+        panic!("noooo");
         Box::pin(async move {
             let space_id = dna_hash.to_k2_space();
             let space = self.kitsune.space(space_id.clone()).await?;
