@@ -11,7 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   to yourself. That no longer works because the networking doesn't let you "connect" to yourself. This is a shorter
   and clearer route to the same result. #4957
 
-## 0.5.2-rc.1
+## 0.5.1
 
 ## 0.5.2-rc.0
 
