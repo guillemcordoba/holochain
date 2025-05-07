@@ -116,3 +116,7 @@ kitsune2_core = { git = "https://github.com/guillemcordoba/kitsune2", branch = "
 kitsune2_dht = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
 kitsune2_gossip = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
 kitsune2_bootstrap_client = { git = "https://github.com/guillemcordoba/kitsune2", branch = "iroh-transport" }
+
+holochain_wasmer_host = { git = "https://github.com/guillemcordoba/holochain-wasmer", branch = "develop" }
+holochain_wasmer_common = { git = "https://github.com/guillemcordoba/holochain-wasmer", branch = "develop" }
+holochain_wasmer_guest = { git = "https://github.com/guillemcordoba/holochain-wasmer", branch = "develop" }
