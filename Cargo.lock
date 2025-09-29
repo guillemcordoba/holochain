@@ -717,6 +717,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4964518bd3b4a8190e832886cdc0da9794f12e8e6c1613a9e90ff331c4c8724b"
 
 [[package]]
+name = "cap"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f125eb85b84a24c36b02ed1d22c9dd8632f53b3cde6e4d23512f94021030003"
+
+[[package]]
 name = "cassowary"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3438,7 +3444,7 @@ dependencies = [
 [[package]]
 name = "holochain_wasmer_common"
 version = "0.0.101"
-source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#725e5656ed8ae87fa08d978e1998ac52c31054e6"
+source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#7790abce6021932c4c940cdd933fb162942907f1"
 dependencies = [
  "holochain_serialized_bytes",
  "serde",
@@ -3449,7 +3455,7 @@ dependencies = [
 [[package]]
 name = "holochain_wasmer_guest"
 version = "0.0.101"
-source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#725e5656ed8ae87fa08d978e1998ac52c31054e6"
+source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#7790abce6021932c4c940cdd933fb162942907f1"
 dependencies = [
  "holochain_serialized_bytes",
  "holochain_wasmer_common",
@@ -3461,16 +3467,14 @@ dependencies = [
 [[package]]
 name = "holochain_wasmer_host"
 version = "0.0.101"
-source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#725e5656ed8ae87fa08d978e1998ac52c31054e6"
+source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#7790abce6021932c4c940cdd933fb162942907f1"
 dependencies = [
  "bimap",
  "bytes",
+ "cap",
  "hex",
  "holochain_serialized_bytes",
  "holochain_wasmer_common",
- "jemalloc-sys",
- "jemallocator",
- "libc",
  "parking_lot",
  "serde",
  "thiserror 2.0.17",
@@ -4185,26 +4189,6 @@ name = "itoa"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
-
-[[package]]
-name = "jemalloc-sys"
-version = "0.5.4+5.3.0-patched"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac6c1946e1cea1788cbfde01c993b52a10e2da07f4bac608228d1bed20bfebf2"
-dependencies = [
- "cc",
- "libc",
-]
-
-[[package]]
-name = "jemallocator"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0de374a9f8e63150e6f5e8a60cc14c668226d7a347d8aee1a45766e3c4dd3bc"
-dependencies = [
- "jemalloc-sys",
- "libc",
-]
 
 [[package]]
 name = "jni"
