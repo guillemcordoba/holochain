@@ -3444,7 +3444,7 @@ dependencies = [
 [[package]]
 name = "holochain_wasmer_common"
 version = "0.0.101"
-source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#7790abce6021932c4c940cdd933fb162942907f1"
+source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#cd2041385b5eade58827e3ec642a6da61dd93384"
 dependencies = [
  "holochain_serialized_bytes",
  "serde",
@@ -3455,7 +3455,7 @@ dependencies = [
 [[package]]
 name = "holochain_wasmer_guest"
 version = "0.0.101"
-source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#7790abce6021932c4c940cdd933fb162942907f1"
+source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#cd2041385b5eade58827e3ec642a6da61dd93384"
 dependencies = [
  "holochain_serialized_bytes",
  "holochain_wasmer_common",
@@ -3467,7 +3467,7 @@ dependencies = [
 [[package]]
 name = "holochain_wasmer_host"
 version = "0.0.101"
-source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#7790abce6021932c4c940cdd933fb162942907f1"
+source = "git+https://github.com/guillemcordoba/holochain-wasmer.git?branch=malloc#cd2041385b5eade58827e3ec642a6da61dd93384"
 dependencies = [
  "bimap",
  "bytes",
